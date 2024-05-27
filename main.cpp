@@ -15,7 +15,7 @@ void processInput(GLFWwindow* window);
 int windowWidth = 800, windowHeight = 600;
 
 // camera
-Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
+Camera camera(glm::vec3(0.0f, 1.0f, 0.0f));
 float lastX = windowWidth / 2.0f;
 float lastY = windowHeight / 2.0f;
 bool firstMouse = true;
@@ -97,7 +97,7 @@ int main() {
 	uint8_t grid[8 * 8 * 8];
 	for (int i = 0; i < 8; i++)
 		for (int j = 0; j < 8; j++)
-			for (int k = 0; k < 8; k++) grid[i * 64 + j * 8 + k] = (((float)i - 3.5f) * ((float)i - 3.5f) + ((float)j - 3.5f) * ((float)j - 3.5f) + ((float)k - 3.5f) * ((float)k - 3.5f) < 16);
+			for (int k = 0; k < 8; k++) grid[i * 64 + j * 8 + k] = (((float)i - 3.5f) * ((float)i - 3.5f) + ((float)j - 3.5f) * ((float)j - 3.5f) + ((float)k - 3.5f) * ((float)k - 3.5f) > 16);
 
 	uint32_t data[8 * 8];
 	for (int i = 0; i < 8; i++)

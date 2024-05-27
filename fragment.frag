@@ -111,20 +111,20 @@ struct GridHit{
 
 // J. Amanatides, A. Woo. A Fast Voxel Traversal Algorithm for Ray Tracing.
 GridHit RayGridIntersection(Ray ray, usampler2D grid, vec3 gridPos, float gridScale){
-	SlabIntersection boundHit = RaySlabIntersection(ray, gridPos + vec3(0.), gridPos + vec3(gridScale));
+	SlabIntersection boundHit = RaySlabIntersection(ray, gridPos, gridPos + vec3(gridScale));
 	if (!boundHit.hit) return GridHit(false, -1., ivec3(-1));
 
 	float tMin = boundHit.tmin;
 	float tMax = boundHit.tmax;
 
 	vec3 ray_start = ray.origin + ray.dir * tMin - gridPos;
-	if (tMin < 0.) ray_start = ray.origin;
+	if (tMin < 0.) ray_start = ray.origin - gridPos;
 	vec3 ray_end = ray.origin + ray.dir * tMax - gridPos;
 
 	float voxel_size = gridScale/BRICK_RES;
 
-	ivec3 curr_voxel = max(min(ivec3((ray_start-gridPos)/voxel_size), ivec3(BRICK_RES-1)), ivec3(0));
-	ivec3 last_voxel = max(min(ivec3((ray_end-gridPos)/voxel_size), ivec3(BRICK_RES-1)), ivec3(0));
+	ivec3 curr_voxel = max(min(ivec3((ray_start)/voxel_size), ivec3(BRICK_RES-1)), ivec3(0));
+	ivec3 last_voxel = max(min(ivec3((ray_end)/voxel_size), ivec3(BRICK_RES-1)), ivec3(0));
 
 	//return GridHit(true, distance(ray.origin, gridPos + (curr_voxel*gridScale)/BRICK_RES), last_voxel);
 
