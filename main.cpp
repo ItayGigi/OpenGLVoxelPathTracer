@@ -90,11 +90,14 @@ int main() {
 	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
 	glEnableVertexAttribArray(1);
 
+	// note that this is allowed, the call to glVertexAttribPointer registered VBO as the vertex attribute's bound vertex buffer object so afterwards we can safely unbind
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+
 	// generate sphere grid
 	uint8_t grid[8 * 8 * 8];
 	for (int i = 0; i < 8; i++)
 		for (int j = 0; j < 8; j++)
-			for (int k = 0; k < 8; k++) grid[i * 64 + j * 8 + k] = k;//(((float)i - 3.5f) * ((float)i - 3.5f) + ((float)j - 3.5f) * ((float)j - 3.5f) + ((float)k - 3.5f) * ((float)k - 3.5f) < 16);
+			for (int k = 0; k < 8; k++) grid[i * 64 + j * 8 + k] = (((float)i - 3.5f) * ((float)i - 3.5f) + ((float)j - 3.5f) * ((float)j - 3.5f) + ((float)k - 3.5f) * ((float)k - 3.5f) < 16);
 
 	uint32_t data[8 * 8];
 	for (int i = 0; i < 8; i++)
@@ -116,15 +119,21 @@ int main() {
 		std::cout << std::hex << data[i] << std::endl;
 	}
 
-	unsigned int GridBuffer;
-	glGenBuffers(1, &GridBuffer);
-	glBindBuffer(GL_UNIFORM_BUFFER, GridBuffer);
-	glBufferData(GL_UNIFORM_BUFFER, sizeof(data), data, GL_STATIC_DRAW);
-	glBindBufferBase(GL_UNIFORM_BUFFER, 0, GridBuffer);
-	glUniformBlockBinding(shader.ID, glGetUniformLocation(shader.ID, "GridBuffer"), 0);
+	unsigned int GridTexture;
+	glGenTextures(1, &GridTexture);
+	glBindTexture(GL_TEXTURE_2D, GridTexture);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_R32UI, 8, 8, 0, GL_RED_INTEGER, GL_UNSIGNED_INT, data);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-	// note that this is allowed, the call to glVertexAttribPointer registered VBO as the vertex attribute's bound vertex buffer object so afterwards we can safely unbind
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	// Activate the texture unit and bind the texture
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, GridTexture);
+
+	shader.use();
+	glUniform1i(glGetUniformLocation(shader.ID, "GridTex"), 0);
 
 	// render loop
 	while (!glfwWindowShouldClose(window))
@@ -163,6 +172,8 @@ int main() {
 		glfwPollEvents();
 		glfwSwapBuffers(window);
 	}
+
+	glDeleteTextures(1, &GridTexture);
 
 	glfwTerminate();
 	return 0;

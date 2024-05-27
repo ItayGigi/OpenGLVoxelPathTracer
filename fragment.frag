@@ -9,10 +9,7 @@ uniform mat4 Projection;
 uniform mat4 CamRotation;
 uniform vec3 CamPosition;
 
-layout( std140 ) uniform GridBuffer
-{
-    uint Grid[64];
-};
+uniform usampler2D GridTex;
 
 struct Ray{
 	vec3 origin;
@@ -31,10 +28,10 @@ struct Sphere{
 	Material mat;
 };
 
-uint GetGridCell(uint grid[8*8], int x, int y, int z){
+uint GetGridCell(usampler2D tex, int x, int y, int z){
 	if (x < 0 || x >= 8 || y < 0 || y >= 8 || z < 0 || z >= 8) return 0u;
 
-	uint row = grid[x*8+y];
+	uint row = texture(tex, vec2(float(x)/8., float(y)/8.)).r;
 	return (row >> z*4) & 0xFu;
 }
 
@@ -111,14 +108,14 @@ float RayGridIntersection(Ray ray){
 	return boundT;
 }
 
+vec4 TestGrid(usampler2D grid, vec2 coords){
+	if (coords.y > 0.) return vec4(GetGridCell(GridTex, int(fract(coords.x*4.+4.)*8.), int(coords.y*32.), int(coords.x * 4. + 4.))/8.);
+	else if (coords.y > -1/4.) return vec4(int(fract(coords.x*4.+4.)*8.)/8., int(coords.y*32.+8.)/8., int(coords.x * 4. + 4.)/8., 1.);
+	else return vec4(0.);
+}
+
 void main()
 {
-	if (TexCoord.y > 0.) FragColor = vec4(GetGridCell(Grid, int(fract(TexCoord.x*4.+4.)*8.), int(TexCoord.y*32.), int(TexCoord.x * 4. + 4.))/8.);
-	else if (TexCoord.y > -1/4.) FragColor = vec4(int(fract(TexCoord.x*4.+4.)*8.)/8., int(TexCoord.y*32.+8.)/8., int(TexCoord.x * 4. + 4.)/8., 1.);
-	else if (TexCoord.y < -0.8) FragColor = vec4(Grid[int((TexCoord.x+1.)*32.)]);
-	else FragColor = vec4(0.);
-	return;
-
 	float aspect = float(Resolution.x)/float(Resolution.y);
 
 	vec3 dir = (CamRotation * vec4(TexCoord.x*aspect, TexCoord.y, 1., 1.)).xyz;
