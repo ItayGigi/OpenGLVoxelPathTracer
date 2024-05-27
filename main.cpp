@@ -114,11 +114,6 @@ int main() {
 				(grid[i * 64 + j * 8 + 7] << 28);
 	}
 
-	for (int i = 0; i < 64; i++)
-	{
-		std::cout << std::hex << data[i] << std::endl;
-	}
-
 	unsigned int GridTexture;
 	glGenTextures(1, &GridTexture);
 	glBindTexture(GL_TEXTURE_2D, GridTexture);
