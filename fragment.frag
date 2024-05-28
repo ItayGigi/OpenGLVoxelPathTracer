@@ -4,8 +4,7 @@ out vec4 FragColor;
 
 in vec2 TexCoord;
 uniform uvec2 Resolution;
-uniform mat4 View;
-uniform mat4 Projection;
+
 uniform mat4 CamRotation;
 uniform vec3 CamPosition;
 
@@ -134,32 +133,38 @@ GridHit RayGridIntersection(Ray ray, usampler2D grid, vec3 gridPos, float gridSc
 	vec3 t_next = ((curr_voxel+max(step, ivec3(0)))*voxel_size-ray_start)/ray.dir;
 	vec3 t_delta = voxel_size/abs(ray.dir);
 
+	float dist = 0.;
+
 	int iter = 0;
 	while(last_voxel != curr_voxel && iter++ < BRICK_RES*4) {
 		if (GetGridCell(grid, curr_voxel.x, curr_voxel.y, curr_voxel.z) != 0u)
-			return GridHit(true, distance(ray.origin, gridPos + (curr_voxel*gridScale)/BRICK_RES), curr_voxel);
+			return GridHit(true, dist + max(tMin, 0.), curr_voxel);
 
 		if (t_next.x < t_next.y) {
 			if (t_next.x < t_next.z) {
 				curr_voxel.x += int(step.x);
+				dist = t_next.x;
 				t_next.x += t_delta.x;
 			} else {
 				curr_voxel.z += int(step.z);
+				dist = t_next.z;
 				t_next.z += t_delta.z;
 			}
 		} else {
 			if (t_next.y < t_next.z) {
 				curr_voxel.y += int(step.y);
+				dist = t_next.y;
 				t_next.y += t_delta.y;
 			} else {
 				curr_voxel.z += int(step.z);
+				dist = t_next.z;
 				t_next.z += t_delta.z;
 			}
 		}
 	}
 
 	if (GetGridCell(grid, curr_voxel.x, curr_voxel.y, curr_voxel.z) != 0u)
-		return GridHit(true, distance(ray.origin, gridPos + (curr_voxel*gridScale)/BRICK_RES), curr_voxel);
+		return GridHit(true, dist + max(tMin, 0.), curr_voxel);
 	
 	return GridHit(false, iter, last_voxel);
 }
@@ -178,13 +183,13 @@ void main()
 
 	Ray ray = Ray(CamPosition, normalize(dir));
 
-	GridHit hit = RayGridIntersection(ray, GridTex, vec3(0.), 1.);
+	GridHit hit = RayGridIntersection(ray, GridTex, vec3(-2.), 5.);
 
 	if (!hit.hit){
-		FragColor = vec4(0., 0., 0., 1.);
+		FragColor = vec4(0.0, 0.0, 0.0, 1.0);
 		return;
 	}
 
 	//FragColor = vec4(ray.origin+ray.dir*hit.dist, 1.0f);
-	FragColor = vec4(hit.voxelIndex/8., 1.);
+	FragColor = vec4(ray.origin + ray.dir*hit.dist, 1.);
 }

@@ -12,6 +12,9 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 void processInput(GLFWwindow* window);
+void draw(Shader shader, unsigned int VAO);
+unsigned int createVAO();
+bool loadScene(Shader shader, const char* brickmapPath, const char* brickNames[], unsigned int* textures);
 
 int windowWidth = 800, windowHeight = 600;
 
@@ -57,81 +60,13 @@ int main() {
 		return -1;
 	}
 
+	unsigned int VAO = createVAO();
+
 	Shader shader("vertex.vert", "fragment.frag");
 
-	// create and load vertices
-	float vertices[] = {
-		 1.0f,  1.0f, 0.0f,		1.0f, 1.0f,    // top right
-		 1.0f, -1.0f, 0.0f,		1.0f, -1.0f,   // bottom right
-		-1.0f, -1.0f, 0.0f,		-1.0f, -1.0f,  // bottom left
-		-1.0f,  1.0f, 0.0f,		-1.0f, 1.0f    // top left 
-	};
-
-	unsigned int indices[] = {
-		0, 1, 3,  // first Triangle
-		1, 2, 3   // second Triangle
-	};
-
-	unsigned int VBO, VAO, EBO;
-	glGenVertexArrays(1, &VAO);
-	glGenBuffers(1, &VBO);
-	glGenBuffers(1, &EBO);
-	// bind the Vertex Array Object first, then bind and set vertex buffer(s), and then configure vertex attributes(s).
-	glBindVertexArray(VAO);
-
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
-
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
-	glEnableVertexAttribArray(0);
-
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
-	glEnableVertexAttribArray(1);
-
-	// note that this is allowed, the call to glVertexAttribPointer registered VBO as the vertex attribute's bound vertex buffer object so afterwards we can safely unbind
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-	// generate sphere grid
-	uint8_t grid[8 * 8 * 8];
-	for (int i = 0; i < 8; i++)
-		for (int j = 0; j < 8; j++)
-			for (int k = 0; k < 8; k++) grid[i * 64 + j * 8 + k] = (((float)i - 3.5f) * ((float)i - 3.5f) + ((float)j - 3.5f) * ((float)j - 3.5f) + ((float)k - 3.5f) * ((float)k - 3.5f) > 16);
-
-	uint32_t data[8 * 8];
-	for (int i = 0; i < 8; i++)
-	{
-		for (int j = 0; j < 8; j++)
-			data[i * 8 + j] = 
-				(grid[i * 64 + j * 8 + 0] << 0) |
-				(grid[i * 64 + j * 8 + 1] << 4) |
-				(grid[i * 64 + j * 8 + 2] << 8) |
-				(grid[i * 64 + j * 8 + 3] << 12) |
-				(grid[i * 64 + j * 8 + 4] << 16) |
-				(grid[i * 64 + j * 8 + 5] << 20) |
-				(grid[i * 64 + j * 8 + 6] << 24) |
-				(grid[i * 64 + j * 8 + 7] << 28);
-	}
-
-	Brick chair("assets/bricks/chair.vox");
-
-	unsigned int GridTexture;
-	glGenTextures(1, &GridTexture);
-	glBindTexture(GL_TEXTURE_2D, GridTexture);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_R32UI, 8, 8, 0, GL_RED_INTEGER, GL_UNSIGNED_INT, chair.data);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-	// Activate the texture unit and bind the texture
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, GridTexture);
-
-	shader.use();
-	glUniform1i(glGetUniformLocation(shader.ID, "GridTex"), 0);
+	unsigned int sceneTex;
+	const char* bricks[2] = { "bricks/chair.vox", "bricks/untitled.vox" };
+	loadScene(shader, "brickmap.vox", bricks, &sceneTex);
 
 	// render loop
 	while (!glfwWindowShouldClose(window))
@@ -149,29 +84,13 @@ int main() {
 
 		processInput(window);
 
-		glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)windowWidth / (float)windowHeight, 0.1f, 100.0f);
-		shader.setMat4("Projection", projection);
-
-		// camera/view transformation
-		glm::mat4 view = camera.GetViewMatrix();
-		shader.setMat4("View", glm::inverse(projection * view));
-
-		shader.setMat4("CamRotation", glm::mat4_cast(camera.GetRotation()));
-		shader.setVec3("CamPosition", camera.Position);
-
-		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-		glClear(GL_COLOR_BUFFER_BIT);
-
-		shader.use();
-		shader.setUVec2("Resolution", windowWidth, windowHeight);
-		glBindVertexArray(VAO);
-		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+		draw(shader, VAO);
 
 		glfwPollEvents();
 		glfwSwapBuffers(window);
 	}
 
-	glDeleteTextures(1, &GridTexture);
+	glDeleteTextures(1, &sceneTex);
 
 	glfwTerminate();
 	return 0;
@@ -230,4 +149,76 @@ void mouse_callback(GLFWwindow* window, double xposIn, double yposIn)
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 {
 	camera.ProcessMouseScroll(static_cast<float>(yoffset));
+}
+
+unsigned int createVAO() {
+	// create and load vertices
+	float vertices[] = {
+		 1.0f,  1.0f, 0.0f,		1.0f, 1.0f,    // top right
+		 1.0f, -1.0f, 0.0f,		1.0f, -1.0f,   // bottom right
+		-1.0f, -1.0f, 0.0f,		-1.0f, -1.0f,  // bottom left
+		-1.0f,  1.0f, 0.0f,		-1.0f, 1.0f    // top left 
+	};
+
+	unsigned int indices[] = {
+		0, 1, 3,  // first Triangle
+		1, 2, 3   // second Triangle
+	};
+
+	unsigned int VBO, VAO, EBO;
+	glGenVertexArrays(1, &VAO);
+	glGenBuffers(1, &VBO);
+	glGenBuffers(1, &EBO);
+	// bind the Vertex Array Object first, then bind and set vertex buffer(s), and then configure vertex attributes(s).
+	glBindVertexArray(VAO);
+
+	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+	glEnableVertexAttribArray(0);
+
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+	glEnableVertexAttribArray(1);
+
+	// note that this is allowed, the call to glVertexAttribPointer registered VBO as the vertex attribute's bound vertex buffer object so afterwards we can safely unbind
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+	return VAO;
+}
+
+void draw(Shader shader, unsigned int VAO) {
+	shader.use();
+
+	shader.setMat4("CamRotation", glm::mat4_cast(camera.GetRotation()));
+	shader.setVec3("CamPosition", camera.Position);
+
+	shader.setUVec2("Resolution", windowWidth, windowHeight);
+
+	glBindVertexArray(VAO);
+	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+}
+
+bool loadScene(Shader shader, const char* brickmapPath, const char* brickNames[], unsigned int* textures) {
+	Brick chair((std::string("assets/") + brickNames[0]).c_str());
+
+	glGenTextures(1, textures);
+	glBindTexture(GL_TEXTURE_2D, *textures);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_R32UI, 8, 8, 0, GL_RED_INTEGER, GL_UNSIGNED_INT, chair.data);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+	// Activate the texture unit and bind the texture
+	glActiveTexture(GL_TEXTURE0);
+	//glBindTexture(GL_TEXTURE_2D, GridTexture);
+
+	shader.use();
+	glUniform1i(glGetUniformLocation(shader.ID, "GridTex"), 0);
+
+	return true;
 }
