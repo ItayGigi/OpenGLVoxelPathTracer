@@ -136,7 +136,9 @@
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="brick.h" />
     <ClInclude Include="camera.h" />
+    <ClInclude Include="ogt_vox.h" />
     <ClInclude Include="shader.h" />
   </ItemGroup>
   <ItemGroup>

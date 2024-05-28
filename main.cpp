@@ -6,6 +6,7 @@
 #include <glm/gtc/type_ptr.hpp>
 #include "shader.h"
 #include "camera.h"
+#include "brick.h"
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
@@ -114,10 +115,12 @@ int main() {
 				(grid[i * 64 + j * 8 + 7] << 28);
 	}
 
+	Brick chair("assets/bricks/chair.vox");
+
 	unsigned int GridTexture;
 	glGenTextures(1, &GridTexture);
 	glBindTexture(GL_TEXTURE_2D, GridTexture);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_R32UI, 8, 8, 0, GL_RED_INTEGER, GL_UNSIGNED_INT, data);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_R32UI, 8, 8, 0, GL_RED_INTEGER, GL_UNSIGNED_INT, chair.data);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
