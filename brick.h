@@ -65,7 +65,7 @@ public:
 				voxel_data[i] = pallet_to_my_mat[voxel_data[i]];
 			else { // assign new material
 				ogt_vox_rgba color = scene->palette.color[voxel_data[i]];
-				mats[matCount] = { (unsigned int)(color.r) << 24 | color.g << 16 | color.b << 8 | color.a };
+				mats[matCount] = { (unsigned int)(color.r) << 24 | (unsigned int)(color.g) << 16 | (unsigned int)(color.b) << 8 | (unsigned int)(color.a) };
 				pallet_to_my_mat[voxel_data[i]] = matCount;
 				voxel_data[i] = matCount;
 

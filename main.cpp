@@ -14,7 +14,7 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 void processInput(GLFWwindow* window);
 void draw(Shader shader, unsigned int VAO);
 unsigned int createVAO();
-bool loadScene(Shader shader, const char* brickmapPath, const char* brickNames[], unsigned int* textures);
+bool loadScene(Shader shader, const char* brickmapPath, const char* brickNames[], unsigned int* textures, unsigned int* matsTexture);
 
 int windowWidth = 800, windowHeight = 600;
 
@@ -64,9 +64,15 @@ int main() {
 
 	Shader shader("vertex.vert", "fragment.frag");
 
-	unsigned int sceneTex;
+	unsigned int sceneTex, matsTex;
 	const char* bricks[2] = { "bricks/chair.vox", "bricks/untitled.vox" };
-	loadScene(shader, "brickmap.vox", bricks, &sceneTex);
+
+	if (!loadScene(shader, "brickmap.vox", bricks, &sceneTex, &matsTex)) {
+		std::cerr << "failed to load scene. exiting" << std::endl;
+		glDeleteTextures(1, &sceneTex);
+		glfwTerminate();
+		return -1;
+	}
 
 	// render loop
 	while (!glfwWindowShouldClose(window))
@@ -202,7 +208,7 @@ void draw(Shader shader, unsigned int VAO) {
 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 }
 
-bool loadScene(Shader shader, const char* brickmapPath, const char* brickNames[], unsigned int* textures) {
+bool loadScene(Shader shader, const char* brickmapPath, const char* brickNames[], unsigned int* textures, unsigned int* matsTexture) {
 	Brick chair((std::string("assets/") + brickNames[0]).c_str());
 
 	glGenTextures(1, textures);
@@ -219,6 +225,31 @@ bool loadScene(Shader shader, const char* brickmapPath, const char* brickNames[]
 
 	shader.use();
 	glUniform1i(glGetUniformLocation(shader.ID, "GridTex"), 0);
+
+	const int brickAmount = 1;
+
+	uint32_t matsData[brickAmount * 16 * 2] = { 0 };
+
+	for (int i = 1; i < chair.matCount; i++)
+	{
+		matsData[(0 * 16 + i) * 2 + 0] = chair.mats[i].color >> 8;
+		matsData[(0 * 16 + i) * 2 + 1] = 1;
+	}
+
+	glGenTextures(1, matsTexture);
+	glActiveTexture(GL_TEXTURE0 + 1);
+	glBindTexture(GL_TEXTURE_2D, *matsTexture);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RG32UI, brickAmount, 16, 0, GL_RG_INTEGER, GL_UNSIGNED_INT, matsData);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+
+	// Activate the texture unit and bind the texture
+	//glBindTexture(GL_TEXTURE_2D, GridTexture);
+
+	shader.use();
+	glUniform1i(glGetUniformLocation(shader.ID, "MatsTex"), 1);
 
 	return true;
 }

@@ -9,6 +9,7 @@ uniform mat4 CamRotation;
 uniform vec3 CamPosition;
 
 uniform usampler2D GridTex;
+uniform usampler2D MatsTex;
 
 #define BRICK_RES 8
 #define EPSILON 0.00001
@@ -30,11 +31,18 @@ struct Sphere{
 	Material mat;
 };
 
-uint GetGridCell(usampler2D tex, int x, int y, int z){
-	if (x < 0 || x >= BRICK_RES || y < 0 || y >= BRICK_RES || z < 0 || z >= BRICK_RES) return 0u;
+uint GetGridCell(usampler2D tex, ivec3 loc){
+	if (loc.x < 0 || loc.x >= BRICK_RES || loc.y < 0 || loc.y >= BRICK_RES || loc.z < 0 || loc.z >= BRICK_RES) return 0u;
 
-	uint row = texture(tex, vec2(float(x)/float(BRICK_RES), float(y)/float(BRICK_RES))).r;
-	return (row >> z*4) & 0xFu;
+	uint row = texture(tex, vec2(float(loc.x)/float(BRICK_RES), float(loc.y)/float(BRICK_RES))).r;
+	return (row >> loc.z*4) & 0xFu;
+}
+
+Material GetMaterial(int brickIndex, int matIndex){
+	uint val = texture(MatsTex, vec2(brickIndex, matIndex/16.)).r;
+	vec3 color = vec3(float((val >> 16) & 0xFFu)/255., float((val >> 8) & 0xFFu)/255., float((val >> 0) & 0xFFu)/255.);
+
+	return Material(color, 0., 0.);
 }
 
 float RaySphereIntersection(Ray ray, Sphere sphere){
@@ -137,7 +145,7 @@ GridHit RayGridIntersection(Ray ray, usampler2D grid, vec3 gridPos, float gridSc
 
 	int iter = 0;
 	while(last_voxel != curr_voxel && iter++ < BRICK_RES*4) {
-		if (GetGridCell(grid, curr_voxel.x, curr_voxel.y, curr_voxel.z) != 0u)
+		if (GetGridCell(grid, curr_voxel) != 0u)
 			return GridHit(true, dist + max(tMin, 0.), curr_voxel);
 
 		if (t_next.x < t_next.y) {
@@ -163,14 +171,14 @@ GridHit RayGridIntersection(Ray ray, usampler2D grid, vec3 gridPos, float gridSc
 		}
 	}
 
-	if (GetGridCell(grid, curr_voxel.x, curr_voxel.y, curr_voxel.z) != 0u)
+	if (GetGridCell(grid, curr_voxel) != 0u)
 		return GridHit(true, dist + max(tMin, 0.), curr_voxel);
 	
 	return GridHit(false, iter, last_voxel);
 }
 
 vec4 TestGrid(usampler2D grid, vec2 coords){
-	if (coords.y > 0.) return vec4(GetGridCell(GridTex, int(fract(coords.x*4.+4.)*8.), int(coords.y*32.), int(coords.x * 4. + 4.))/8.);
+	if (coords.y > 0.) return vec4(GetGridCell(GridTex, ivec3(int(fract(coords.x*4.+4.)*8.), int(coords.y*32.), int(coords.x * 4. + 4.)))/8.);
 	else if (coords.y > -1/4.) return vec4(int(fract(coords.x*4.+4.)*8.)/8., int(coords.y*32.+8.)/8., int(coords.x * 4. + 4.)/8., 1.);
 	else return vec4(0.);
 }
@@ -183,13 +191,13 @@ void main()
 
 	Ray ray = Ray(CamPosition, normalize(dir));
 
-	GridHit hit = RayGridIntersection(ray, GridTex, vec3(-2.), 5.);
+	GridHit hit = RayGridIntersection(ray, GridTex, vec3(0.), 1.);
 
 	if (!hit.hit){
 		FragColor = vec4(0.0, 0.0, 0.0, 1.0);
 		return;
 	}
 
-	//FragColor = vec4(ray.origin+ray.dir*hit.dist, 1.0f);
-	FragColor = vec4(ray.origin + ray.dir*hit.dist, 1.);
+	//FragColor = vec4(ray.origin + ray.dir*hit.dist, 1.);
+	FragColor = vec4(GetMaterial(0, int(GetGridCell(GridTex, hit.voxelIndex))).color, 0.);
 }
