@@ -8,7 +8,8 @@ uniform uvec2 Resolution;
 uniform mat4 CamRotation;
 uniform vec3 CamPosition;
 
-uniform usampler2D GridTex;
+uniform usampler2D BrickMap;
+uniform usampler2DArray BricksTex;
 uniform usampler2D MatsTex;
 
 #define BRICK_RES 8
@@ -38,8 +39,15 @@ uint GetGridCell(usampler2D tex, ivec3 loc){
 	return (row >> loc.z*4) & 0xFu;
 }
 
+uint GetBrickCell(int brick, ivec3 loc){
+	if (loc.x < 0 || loc.x >= BRICK_RES || loc.y < 0 || loc.y >= BRICK_RES || loc.z < 0 || loc.z >= BRICK_RES) return 0u;
+
+	uint row = texelFetch(BricksTex, ivec3(loc.x, loc.y, brick-1), 0).r;
+	return (row >> loc.z*4) & 0xFu;
+}
+
 Material GetMaterial(int brickIndex, int matIndex){
-	uint val = texture(MatsTex, vec2(brickIndex, matIndex/16.)).r;
+	uint val = texelFetch(MatsTex, ivec2(matIndex, brickIndex), 0).r;
 	vec3 color = vec3(float((val >> 16) & 0xFFu)/255., float((val >> 8) & 0xFFu)/255., float((val >> 0) & 0xFFu)/255.);
 
 	return Material(color, 0., 0.);
@@ -117,7 +125,7 @@ struct GridHit{
 };
 
 // J. Amanatides, A. Woo. A Fast Voxel Traversal Algorithm for Ray Tracing.
-GridHit RayGridIntersection(Ray ray, usampler2D grid, vec3 gridPos, float gridScale){
+GridHit RayGridIntersection(Ray ray, int grid, vec3 gridPos, float gridScale){
 	SlabIntersection boundHit = RaySlabIntersection(ray, gridPos, gridPos + vec3(gridScale));
 	if (!boundHit.hit) return GridHit(false, -1., ivec3(-1));
 
@@ -145,7 +153,10 @@ GridHit RayGridIntersection(Ray ray, usampler2D grid, vec3 gridPos, float gridSc
 
 	int iter = 0;
 	while(last_voxel != curr_voxel && iter++ < BRICK_RES*4) {
-		if (GetGridCell(grid, curr_voxel) != 0u)
+		uint cell;
+		if (grid == 0) cell = GetGridCell(BrickMap, curr_voxel);
+		else cell = GetBrickCell(grid, curr_voxel);
+		if (cell != 0u)
 			return GridHit(true, dist + max(tMin, 0.), curr_voxel);
 
 		if (t_next.x < t_next.y) {
@@ -171,14 +182,17 @@ GridHit RayGridIntersection(Ray ray, usampler2D grid, vec3 gridPos, float gridSc
 		}
 	}
 
-	if (GetGridCell(grid, curr_voxel) != 0u)
+	uint cell;
+	if (grid == 0) cell = GetGridCell(BrickMap, curr_voxel);
+	else cell = GetBrickCell(grid, curr_voxel);
+	if (cell != 0u)
 		return GridHit(true, dist + max(tMin, 0.), curr_voxel);
 	
 	return GridHit(false, iter, last_voxel);
 }
 
-vec4 TestGrid(usampler2D grid, vec2 coords){
-	if (coords.y > 0.) return vec4(GetGridCell(GridTex, ivec3(int(fract(coords.x*4.+4.)*8.), int(coords.y*32.), int(coords.x * 4. + 4.)))/8.);
+vec4 TestBrick(int brick, vec2 coords){
+	if (coords.y > 0.) return vec4(GetBrickCell(brick, ivec3(int(fract(coords.x*4.+4.)*8.), int(coords.y*32.), int(coords.x * 4. + 4.)))/8.);
 	else if (coords.y > -1/4.) return vec4(int(fract(coords.x*4.+4.)*8.)/8., int(coords.y*32.+8.)/8., int(coords.x * 4. + 4.)/8., 1.);
 	else return vec4(0.);
 }
@@ -191,7 +205,7 @@ void main()
 
 	Ray ray = Ray(CamPosition, normalize(dir));
 
-	GridHit hit = RayGridIntersection(ray, GridTex, vec3(0.), 1.);
+	GridHit hit = RayGridIntersection(ray, 2, vec3(0.), 1.);
 
 	if (!hit.hit){
 		FragColor = vec4(0.0, 0.0, 0.0, 1.0);
@@ -199,5 +213,5 @@ void main()
 	}
 
 	//FragColor = vec4(ray.origin + ray.dir*hit.dist, 1.);
-	FragColor = vec4(GetMaterial(0, int(GetGridCell(GridTex, hit.voxelIndex))).color, 0.);
+	FragColor = vec4(GetMaterial(1, int(GetBrickCell(2, hit.voxelIndex))).color, 0.);
 }
