@@ -91,9 +91,14 @@ public:
         glUniform1f(glGetUniformLocation(ID, name.c_str()), value);
     }
 
-    void setUVec2(const std::string& name, unsigned int val1, unsigned int val2) const
+    void setUVec2(const std::string& name, unsigned int x, unsigned int y) const
     {
-        glUniform2ui(glGetUniformLocation(ID, name.c_str()), val1, val2);
+        glUniform2ui(glGetUniformLocation(ID, name.c_str()), x, y);
+    }
+
+    void setUVec3(const std::string& name, unsigned int x, unsigned int y, unsigned int z) const
+    {
+        glUniform3ui(glGetUniformLocation(ID, name.c_str()), x, y, z);
     }
 
     void setVec2(const std::string& name, const glm::vec2& value) const

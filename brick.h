@@ -12,6 +12,81 @@
 #include <io.h>
 #include "ogt_vox.h"
 
+// parse magicavoxel file
+const ogt_vox_scene* readScene(const char* filePath) {
+	int err;
+	FILE* fp;
+
+	if ((err = fopen_s(&fp, filePath, "rb")) != 0) {
+		std::cerr << "cannot open file " << filePath << std::endl;
+		return nullptr;
+	}
+
+	uint32_t buffer_size = _filelength(_fileno(fp));
+	uint8_t* buffer = new uint8_t[buffer_size];
+	fread(buffer, buffer_size, 1, fp);
+	fclose(fp);
+
+	const ogt_vox_scene* scene = ogt_vox_read_scene(buffer, buffer_size);
+	delete[] buffer;
+	return scene;
+}
+
+void encodeData(const uint8_t* voxel_data, uint32_t* data_arr, unsigned int size_x, unsigned int size_y, unsigned int size_z) {
+	for (int x = 0; x < size_x; x++)
+	{
+		for (int z = 0; z < size_z; z++)
+		{
+			const int index = (x * size_z + z) * size_y/8;
+
+			for (int i = 0; i < (size_y / 8); i++)
+			{
+				data_arr[index] =
+					(voxel_data[((i * 8 + 0) * size_x + x) * size_z + z] << 0) |
+					(voxel_data[((i * 8 + 1) * size_x + x) * size_z + z] << 4) |
+					(voxel_data[((i * 8 + 2) * size_x + x) * size_z + z] << 8) |
+					(voxel_data[((i * 8 + 3) * size_x + x) * size_z + z] << 12) |
+					(voxel_data[((i * 8 + 4) * size_x + x) * size_z + z] << 16) |
+					(voxel_data[((i * 8 + 5) * size_x + x) * size_z + z] << 20) |
+					(voxel_data[((i * 8 + 6) * size_x + x) * size_z + z] << 24) |
+					(voxel_data[((i * 8 + 7) * size_x + x) * size_z + z] << 28);
+			}
+		}
+	}
+}
+
+class BrickMap
+{
+public:
+	unsigned int size_x, size_y, size_z;
+	uint32_t* data = NULL;
+
+	// read brickmap from MagicaVoxel file
+	BrickMap(const char* filePath) {
+		const ogt_vox_scene* scene = readScene(filePath);
+		if (!scene) return;
+
+		const ogt_vox_model* model = scene->models[0];
+
+		size_x = model->size_x;
+		size_y = model->size_z;
+		size_z = model->size_y;
+
+		if (size_y % 8 != 0) {
+			std::cerr << filePath << ": brickmap's height has to be a multiple of 8." << std::endl;
+			ogt_vox_destroy_scene(scene);
+			return;
+		}
+
+		data = new uint32_t[size_x*size_y*size_z/8];
+		encodeData(model->voxel_data, data, size_x, size_y, size_z);
+	}
+	
+	~BrickMap() {
+		delete[] data;
+	}
+};
+
 struct Material
 {
 	uint32_t color;
@@ -20,28 +95,14 @@ struct Material
 class Brick
 {
 public:
-	uint32_t data[BRICK_SIZE * BRICK_SIZE * BRICK_SIZE / 8];
+	uint32_t* data = NULL;
 	Material mats[16];
 	int matCount = 1;
 
 	// read brick from MagicaVoxel file
 	Brick(const char* filePath) {
-		int err;
-		FILE* fp;
-
-		if ((err = fopen_s(&fp, filePath, "rb")) != 0) {
-			std::cerr << "cannot open file " << filePath << std::endl;
-			return;
-		}
-
-		uint32_t buffer_size = _filelength(_fileno(fp));
-		uint8_t* buffer = new uint8_t[buffer_size];
-		fread(buffer, buffer_size, 1, fp);
-		fclose(fp);
-
-		const ogt_vox_scene* scene = ogt_vox_read_scene(buffer, buffer_size);
-		// the buffer can be safely deleted once the scene is instantiated.
-		delete[] buffer;
+		const ogt_vox_scene* scene = readScene(filePath);
+		if (!scene) return;
 
 		const ogt_vox_model* model = scene->models[0];
 
@@ -73,29 +134,14 @@ public:
 			}
 		}
 
-		// encode data
-		for (int x = 0; x < BRICK_SIZE; x++)
-		{
-			for (int y = 0; y < BRICK_SIZE; y++)
-			{
-				for (int i = 0; i < (BRICK_SIZE / 8); i++)
-				{
-					const int index = (x * BRICK_SIZE + y) * BRICK_SIZE;
-
-					data[index / 8] =
-						(voxel_data[index + i * 8 + 0] << 0) |
-						(voxel_data[index + i * 8 + 1] << 4) |
-						(voxel_data[index + i * 8 + 2] << 8) |
-						(voxel_data[index + i * 8 + 3] << 12) |
-						(voxel_data[index + i * 8 + 4] << 16) |
-						(voxel_data[index + i * 8 + 5] << 20) |
-						(voxel_data[index + i * 8 + 6] << 24) |
-						(voxel_data[index + i * 8 + 7] << 28);
-				}
-			}
-		}
+		data = new uint32_t[BRICK_SIZE * BRICK_SIZE * BRICK_SIZE / 8];
+		encodeData(voxel_data, data, BRICK_SIZE, BRICK_SIZE, BRICK_SIZE);
 
 		ogt_vox_destroy_scene(scene);
+	}
+
+	~Brick() {
+		delete[] data;
 	}
 };
 
