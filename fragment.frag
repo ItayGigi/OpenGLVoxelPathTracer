@@ -278,14 +278,13 @@ void main()
 	Ray ray = Ray(CamPosition, normalize(dir));
 
 	GridHit hit = RaySceneIntersection(ray, vec3(0.), 1.);
-	//GridHit hit = RayGridIntersection(ray, 2, vec3(0.), 1.);
 
 	//FragColor = vec4(hit.additional/100.);
 	//return;
 
 	if (!hit.hit){
-		vec4 topColor = vec4(0.35, 0.9, 1.0, 1.0);
-		vec4 bottomColor = vec4(0.78, 0.97, 1.0, 1.0);
+		vec4 topColor = vec4(0.34, 0.34, 0.34, 1.0);
+		vec4 bottomColor = vec4(0.0, 0.0, 0.0, 1.0);
 		FragColor = mix(bottomColor, topColor, atan(ray.dir.y)/2*3.14159);
 		return;
 	}

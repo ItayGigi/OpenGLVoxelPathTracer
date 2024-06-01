@@ -41,7 +41,7 @@ void encodeData(const uint8_t* voxel_data, uint32_t* data_arr, unsigned int size
 
 			for (int i = 0; i < (size_y / 8); i++)
 			{
-				data_arr[index] =
+				data_arr[index+i] =
 					(voxel_data[((i * 8 + 0) * size_x + x) * size_z + z] << 0) |
 					(voxel_data[((i * 8 + 1) * size_x + x) * size_z + z] << 4) |
 					(voxel_data[((i * 8 + 2) * size_x + x) * size_z + z] << 8) |

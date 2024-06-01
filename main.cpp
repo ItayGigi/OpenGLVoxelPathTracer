@@ -66,7 +66,7 @@ int main() {
 	unsigned int sceneTex, bricksTex, matsTex;
 	const char* bricks[2] = { "bricks/block.vox", "bricks/chair.vox" };
 
-	if (!loadScene(shader, "map.vox", bricks, 2, &sceneTex, &bricksTex, &matsTex)) {
+	if (!loadScene(shader, "map1.vox", bricks, 2, &sceneTex, &bricksTex, &matsTex)) {
 		std::cerr << "failed to load scene. exiting" << std::endl;
 		glDeleteTextures(1, &sceneTex);
 		glDeleteTextures(1, &sceneTex);
