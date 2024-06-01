@@ -147,12 +147,13 @@ GridHit RayGridIntersection(Ray ray, int grid, vec3 gridPos, float gridScale){
 	ivec3 curr_voxel = max(min(ivec3((ray_start)/voxel_size), ivec3(BRICK_RES-1)), ivec3(0));
 	ivec3 last_voxel = max(min(ivec3((ray_end)/voxel_size), ivec3(BRICK_RES-1)), ivec3(0));
 
-	vec3 step = sign(ray.dir);
+	ivec3 step = ivec3(sign(ray.dir));
 
 	vec3 t_next = ((curr_voxel+max(step, ivec3(0)))*voxel_size-ray_start)/ray.dir;
 	vec3 t_delta = voxel_size/abs(ray.dir);
 
 	float dist = 0.;
+	bvec3 mask;
 
 	int iter = 0;
 	while(last_voxel != curr_voxel && iter++ < BRICK_RES*4) {
@@ -162,27 +163,11 @@ GridHit RayGridIntersection(Ray ray, int grid, vec3 gridPos, float gridScale){
 		if (cell != 0u)
 			return GridHit(true, dist + max(tMin, 0.), ivec3(0), GetMaterial(grid-1, int(cell)), iter);
 
-		if (t_next.x < t_next.y) {
-			if (t_next.x < t_next.z) {
-				curr_voxel.x += int(step.x);
-				dist = t_next.x;
-				t_next.x += t_delta.x;
-			} else {
-				curr_voxel.z += int(step.z);
-				dist = t_next.z;
-				t_next.z += t_delta.z;
-			}
-		} else {
-			if (t_next.y < t_next.z) {
-				curr_voxel.y += int(step.y);
-				dist = t_next.y;
-				t_next.y += t_delta.y;
-			} else {
-				curr_voxel.z += int(step.z);
-				dist = t_next.z;
-				t_next.z += t_delta.z;
-			}
-		}
+		mask = lessThanEqual(t_next.xyz, min(t_next.yzx, t_next.zxy));
+
+		t_next += vec3(mask) * t_delta;
+		curr_voxel += ivec3(vec3(mask)) * step;
+		dist = min(min(t_next.x, t_next.y), t_next.z);
 	}
 
 	uint cell;
@@ -213,12 +198,13 @@ GridHit RaySceneIntersection(Ray ray, vec3 gridPos, float gridScale){
 	ivec3 curr_voxel = max(min(ivec3((ray_start)/voxel_size), ivec3(MapSize)-ivec3(1)), ivec3(0));
 	ivec3 last_voxel = max(min(ivec3((ray_end)/voxel_size), ivec3(MapSize)-ivec3(1)), ivec3(0));
 
-	vec3 step = sign(ray.dir);
+	ivec3 step = ivec3(sign(ray.dir));
 
 	vec3 t_next = ((curr_voxel+max(step, ivec3(0)))*voxel_size-ray_start)/ray.dir;
 	vec3 t_delta = voxel_size/abs(ray.dir);
 
 	float dist = 0.;
+	bvec3 mask;
 
 	int iter = 0, brickIter = 0;
 	while(last_voxel != curr_voxel && iter++ < int(MapSize.x + MapSize.y + MapSize.z)) {
@@ -229,27 +215,11 @@ GridHit RaySceneIntersection(Ray ray, vec3 gridPos, float gridScale){
 			if (hit.hit) return GridHit(true, hit.dist, hit.normal, hit.mat, iter + brickIter);
 		}
 
-		if (t_next.x < t_next.y) {
-			if (t_next.x < t_next.z) {
-				curr_voxel.x += int(step.x);
-				dist = t_next.x;
-				t_next.x += t_delta.x;
-			} else {
-				curr_voxel.z += int(step.z);
-				dist = t_next.z;
-				t_next.z += t_delta.z;
-			}
-		} else {
-			if (t_next.y < t_next.z) {
-				curr_voxel.y += int(step.y);
-				dist = t_next.y;
-				t_next.y += t_delta.y;
-			} else {
-				curr_voxel.z += int(step.z);
-				dist = t_next.z;
-				t_next.z += t_delta.z;
-			}
-		}
+		mask = lessThanEqual(t_next.xyz, min(t_next.yzx, t_next.zxy));
+
+		t_next += vec3(mask) * t_delta;
+		curr_voxel += ivec3(vec3(mask)) * step;
+		dist = min(min(t_next.x, t_next.y), t_next.z);
 	}
 
 	uint cell = GetBrickMapCell(curr_voxel);
