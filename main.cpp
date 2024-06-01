@@ -66,7 +66,7 @@ int main() {
 	unsigned int sceneTex, bricksTex, matsTex;
 	const char* bricks[2] = { "bricks/block.vox", "bricks/chair.vox" };
 
-	if (!loadScene(shader, "map1.vox", bricks, 2, &sceneTex, &bricksTex, &matsTex)) {
+	if (!loadScene(shader, "map.vox", bricks, 2, &sceneTex, &bricksTex, &matsTex)) {
 		std::cerr << "failed to load scene. exiting" << std::endl;
 		glDeleteTextures(1, &sceneTex);
 		glDeleteTextures(1, &sceneTex);
@@ -75,9 +75,15 @@ int main() {
 		return -1;
 	}
 
+	camera.Yaw = 45;
+	camera.Pitch = 45;
+
+	unsigned int frameCount = 0;
+
 	// render loop
 	while (!glfwWindowShouldClose(window))
 	{
+		frameCount++;
 		float currentFrame = static_cast<float>(glfwGetTime());
 		deltaTime = currentFrame - lastFrame;
 		lastFrame = currentFrame;
@@ -128,7 +134,7 @@ void processInput(GLFWwindow* window)
 		camera.ProcessKeyboard(RIGHT, deltaTime);
 	if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
 		camera.ProcessKeyboard(UP, deltaTime);
-	if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
+	if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS)
 		camera.ProcessKeyboard(DOWN, deltaTime);
 }
 

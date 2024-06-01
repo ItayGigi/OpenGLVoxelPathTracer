@@ -69,7 +69,7 @@ float RaySphereIntersection(Ray ray, Sphere sphere){
 	return (-b - sqrt(discriminant))/(2*a);
 }
 
-struct SlabIntersection{bool hit; float tmin; float tmax;};
+struct SlabIntersection{bool hit; float tmin; float tmax; bvec3 normal;};
 
 SlabIntersection RaySlabIntersection(Ray ray, vec3 min, vec3 max){
 	float tmin = (min.x - ray.origin.x) / ray.dir.x; 
@@ -81,6 +81,8 @@ SlabIntersection RaySlabIntersection(Ray ray, vec3 min, vec3 max){
 		tmax = temp;
 	}
 
+	bvec3 normal = bvec3(1, 0, 0);
+
 	float tymin = (min.y - ray.origin.y) / ray.dir.y; 
 	float tymax = (max.y - ray.origin.y) / ray.dir.y; 
 
@@ -91,13 +93,15 @@ SlabIntersection RaySlabIntersection(Ray ray, vec3 min, vec3 max){
 	}
 
 	if ((tmin > tymax) || (tymin > tmax)) 
-			return SlabIntersection(false, 0., 0.); 
+			return SlabIntersection(false, 0., 0., bvec3(0)); 
 
-	if (tymin > tmin) 
-			tmin = tymin; 
+	if (tymin > tmin) {
+		tmin = tymin; 
+		normal = bvec3(0, 1, 0);
+	}
 
 	if (tymax < tmax) 
-			tmax = tymax; 
+		tmax = tymax; 
 
 	float tzmin = (min.z - ray.origin.z) / ray.dir.z; 
 	float tzmax = (max.z - ray.origin.z) / ray.dir.z; 
@@ -109,15 +113,17 @@ SlabIntersection RaySlabIntersection(Ray ray, vec3 min, vec3 max){
 	}
 
 	if ((tmin > tzmax) || (tzmin > tmax)) 
-			return SlabIntersection(false, 0., 0.); 
+			return SlabIntersection(false, 0., 0., bvec3(0)); 
 
-	if (tzmin > tmin) 
-			tmin = tzmin; 
+	if (tzmin > tmin) {
+		tmin = tzmin; 
+		normal = bvec3(0, 0, 1);
+	}
 
-	if (tzmax < tmax) 
-			tmax = tzmax;
+	if (tzmax < tmax)
+		tmax = tzmax;
 
-	return SlabIntersection(tmax>0., tmin, tmax);
+	return SlabIntersection(tmax>0., tmin, tmax, normal);
 }
 
 struct GridHit{
@@ -153,28 +159,24 @@ GridHit RayGridIntersection(Ray ray, int grid, vec3 gridPos, float gridScale){
 	vec3 t_delta = voxel_size/abs(ray.dir);
 
 	float dist = 0.;
-	bvec3 mask;
+	bvec3 mask = boundHit.normal;
 
 	int iter = 0;
 	while(last_voxel != curr_voxel && iter++ < BRICK_RES*4) {
-		uint cell;
-		if (grid == 0) cell = GetBrickMapCell(curr_voxel);
-		else cell = GetBrickCell(grid, curr_voxel);
+		uint cell = GetBrickCell(grid, curr_voxel);
 		if (cell != 0u)
-			return GridHit(true, dist + max(tMin, 0.), ivec3(0), GetMaterial(grid-1, int(cell)), iter);
+			return GridHit(true, dist + max(tMin, 0.), -ivec3(mask)*step, GetMaterial(grid-1, int(cell)), iter);
 
 		mask = lessThanEqual(t_next.xyz, min(t_next.yzx, t_next.zxy));
 
 		t_next += vec3(mask) * t_delta;
-		curr_voxel += ivec3(vec3(mask)) * step;
+		curr_voxel += ivec3(mask) * step;
 		dist = min(min(t_next.x, t_next.y), t_next.z);
 	}
 
-	uint cell;
-	if (grid == 0) cell = GetBrickMapCell(curr_voxel);
-	else cell = GetBrickCell(grid, curr_voxel);
+	uint cell = GetBrickCell(grid, curr_voxel);
 	if (cell != 0u)
-		return GridHit(true, dist + max(tMin, 0.), ivec3(0), GetMaterial(grid-1, int(cell)), iter);
+		return GridHit(true, dist + max(tMin, 0.), -ivec3(mask)*step, GetMaterial(grid-1, int(cell)), iter);
 	
 	noHit.additional = iter;
 	return noHit;
@@ -218,7 +220,7 @@ GridHit RaySceneIntersection(Ray ray, vec3 gridPos, float gridScale){
 		mask = lessThanEqual(t_next.xyz, min(t_next.yzx, t_next.zxy));
 
 		t_next += vec3(mask) * t_delta;
-		curr_voxel += ivec3(vec3(mask)) * step;
+		curr_voxel += ivec3(mask) * step;
 		dist = min(min(t_next.x, t_next.y), t_next.z);
 	}
 
@@ -261,5 +263,6 @@ void main()
 
 	//FragColor = vec4(hit.voxelIndex/8., 1.);
 	//FragColor = vec4((ray.origin + ray.dir*hit.dist)/10., 1.);
-	FragColor = vec4(hit.mat.color, 1.);
+	float light = dot(hit.normal, normalize(vec3(1.5, 2., 1.)))/2.+0.5;
+	FragColor = vec4(light*hit.mat.color, 1.);
 }
