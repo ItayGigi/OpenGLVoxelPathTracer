@@ -71,59 +71,21 @@ float RaySphereIntersection(Ray ray, Sphere sphere){
 
 struct SlabIntersection{bool hit; float tmin; float tmax; bvec3 normal;};
 
-SlabIntersection RaySlabIntersection(Ray ray, vec3 min, vec3 max){
-	float tmin = (min.x - ray.origin.x) / ray.dir.x; 
-	float tmax = (max.x - ray.origin.x) / ray.dir.x; 
+SlabIntersection RaySlabIntersection(Ray ray, vec3 minpos, vec3 maxpos){
+  vec3 inverse_dir = 1.0 / ray.dir;
+	
+  vec3 tbot = inverse_dir * (minpos - ray.origin);
+  vec3 ttop = inverse_dir * (maxpos - ray.origin);
 
-	if (tmin > tmax) {
-		float temp = tmin;
-		tmin = tmax;
-		tmax = temp;
-	}
+  vec3 dmin = min(ttop, tbot);
+  vec3 dmax = max(ttop, tbot);
 
-	bvec3 normal = bvec3(1, 0, 0);
+  float tmin = max(max(dmin.x, dmin.y), dmin.z);
+  float tmax = min(min(dmax.x, dmax.y), dmax.z);
 
-	float tymin = (min.y - ray.origin.y) / ray.dir.y; 
-	float tymax = (max.y - ray.origin.y) / ray.dir.y; 
+	bvec3 normal = equal(dmin, vec3(tmin));
 
-	if (tymin > tymax) {
-		float temp = tymin;
-		tymin = tymax;
-		tymax = temp;
-	}
-
-	if ((tmin > tymax) || (tymin > tmax)) 
-			return SlabIntersection(false, 0., 0., bvec3(0)); 
-
-	if (tymin > tmin) {
-		tmin = tymin; 
-		normal = bvec3(0, 1, 0);
-	}
-
-	if (tymax < tmax) 
-		tmax = tymax; 
-
-	float tzmin = (min.z - ray.origin.z) / ray.dir.z; 
-	float tzmax = (max.z - ray.origin.z) / ray.dir.z; 
-
-	if (tzmin > tzmax) {
-		float temp = tzmin;
-		tzmin = tzmax;
-		tzmax = temp;
-	}
-
-	if ((tmin > tzmax) || (tzmin > tmax)) 
-			return SlabIntersection(false, 0., 0., bvec3(0)); 
-
-	if (tzmin > tmin) {
-		tmin = tzmin; 
-		normal = bvec3(0, 0, 1);
-	}
-
-	if (tzmax < tmax)
-		tmax = tzmax;
-
-	return SlabIntersection(tmax>0., tmin, tmax, normal);
+	return SlabIntersection(tmax > max(tmin, 0.0), tmin, tmax, normal);
 }
 
 struct GridHit{
