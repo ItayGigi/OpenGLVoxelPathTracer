@@ -8,6 +8,8 @@
 #include "camera.h"
 #include "brick.h"
 
+#include <queue>
+
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
@@ -15,18 +17,30 @@ void processInput(GLFWwindow* window);
 void draw(Shader shader, unsigned int VAO);
 unsigned int createVAO();
 bool loadScene(Shader shader, const char* brickmapPath, const char* brickNames[], const unsigned int brickCount, unsigned int* mapTexture, unsigned int* bricksTexture, unsigned int* matsTexture);
-int windowWidth = 800, windowHeight = 600;
+void updateFPS(GLFWwindow* window);
+
+// window
+int windowWidth = 1000, windowHeight = 700;
 
 // camera
-Camera camera(glm::vec3(0.0f, 1.0f, 0.0f));
+Camera camera(glm::vec3(6.0f, 6.0f, 100.0f));
 float lastX = windowWidth / 2.0f;
 float lastY = windowHeight / 2.0f;
 bool firstMouse = true;
 
+// scene
+const char* bricks[2] = { "bricks/block.vox", "bricks/chair.vox" };
+const char* scenePath = "menger.vox";
+
 // timing
 float deltaTime = 0.0f;	// time between current frame and last frame
-float lastFrame = 0.0f;
-float lastTitleUpdateTime = 0.f;
+float lastFrameTime = 0.0f;
+unsigned int frameCount = 0;
+
+// fps
+float frameTimesSum = 0.0f;
+std::queue<float> lastFrameTimes;
+int fpsAverageAmount = 300;
 
 int main() {
 	// initialize glfw
@@ -63,10 +77,9 @@ int main() {
 
 	Shader shader("vertex.vert", "fragment.frag");
 
+	// load scene
 	unsigned int sceneTex, bricksTex, matsTex;
-	const char* bricks[2] = { "bricks/block.vox", "bricks/chair.vox" };
-
-	if (!loadScene(shader, "map.vox", bricks, 2, &sceneTex, &bricksTex, &matsTex)) {
+	if (!loadScene(shader, scenePath, bricks, 2, &sceneTex, &bricksTex, &matsTex)) {
 		std::cerr << "failed to load scene. exiting" << std::endl;
 		glDeleteTextures(1, &sceneTex);
 		glDeleteTextures(1, &sceneTex);
@@ -75,25 +88,18 @@ int main() {
 		return -1;
 	}
 
-	camera.Yaw = 45;
-	camera.Pitch = 45;
-
-	unsigned int frameCount = 0;
+	camera.Yaw = 150.0f;
+	camera.Pitch = 30.0f;
 
 	// render loop
 	while (!glfwWindowShouldClose(window))
 	{
 		frameCount++;
-		float currentFrame = static_cast<float>(glfwGetTime());
-		deltaTime = currentFrame - lastFrame;
-		lastFrame = currentFrame;
+		float currentFrameTime = static_cast<float>(glfwGetTime());
+		deltaTime = currentFrameTime - lastFrameTime;
+		lastFrameTime = currentFrameTime;
 
-		lastTitleUpdateTime += deltaTime;
-
-		if (lastTitleUpdateTime >= 0.1f) {
-			glfwSetWindowTitle(window, std::to_string((int)(1 / deltaTime)).c_str());
-			lastTitleUpdateTime = 0.f;
-		}
+		updateFPS(window);
 
 		processInput(window);
 
@@ -164,6 +170,19 @@ void mouse_callback(GLFWwindow* window, double xposIn, double yposIn)
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 {
 	camera.ProcessMouseScroll(static_cast<float>(yoffset));
+}
+
+void updateFPS(GLFWwindow* window) {
+	lastFrameTimes.push(deltaTime);
+	frameTimesSum += deltaTime;
+
+	if (frameCount > fpsAverageAmount) {
+		frameTimesSum -= lastFrameTimes.front();
+		lastFrameTimes.pop();
+
+		float average = fpsAverageAmount / frameTimesSum;
+		glfwSetWindowTitle(window, std::to_string(average).c_str());
+	}
 }
 
 unsigned int createVAO() {
