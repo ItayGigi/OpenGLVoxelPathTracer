@@ -78,7 +78,7 @@ struct GridHit{
 };
 
 // J. Amanatides, A. Woo. A Fast Voxel Traversal Algorithm for Ray Tracing.
-GridHit RayBrickIntersection(Ray ray, int grid, vec3 gridPos, float gridScale){
+GridHit RayBrickIntersection(Ray ray, int brickIndex, vec3 gridPos, float gridScale){
 	GridHit noHit = GridHit(false, -1., ivec3(-1), Material(vec3(0.), 0., 0.), 0);
 
 	SlabIntersection boundHit = RaySlabIntersection(ray, gridPos, gridPos + vec3(gridScale));
@@ -106,9 +106,9 @@ GridHit RayBrickIntersection(Ray ray, int grid, vec3 gridPos, float gridScale){
 
 	int iter = 0;
 	while(last_voxel != curr_voxel && iter++ < BRICK_RES*4) {
-		uint cell = GetBrickCell(grid, curr_voxel);
+		uint cell = GetBrickCell(brickIndex, curr_voxel);
 		if (cell != 0u)
-			return GridHit(true, dist + max(tMin, 0.), -ivec3(mask)*step, GetMaterial(grid-1, int(cell)), iter);
+			return GridHit(true, dist + max(tMin, 0.), -ivec3(mask)*step, GetMaterial(brickIndex-1, int(cell)), iter);
 
 		mask = lessThanEqual(t_next.xyz, min(t_next.yzx, t_next.zxy));
 
@@ -117,9 +117,9 @@ GridHit RayBrickIntersection(Ray ray, int grid, vec3 gridPos, float gridScale){
 		dist = min(min(t_next.x, t_next.y), t_next.z);
 	}
 
-	uint cell = GetBrickCell(grid, curr_voxel);
+	uint cell = GetBrickCell(brickIndex, curr_voxel);
 	if (cell != 0u)
-		return GridHit(true, dist + max(tMin, 0.), -ivec3(mask)*step, GetMaterial(grid-1, int(cell)), iter);
+		return GridHit(true, dist + max(tMin, 0.), -ivec3(mask)*step, GetMaterial(brickIndex-1, int(cell)), iter);
 	
 	noHit.additional = iter;
 	return noHit;
@@ -148,7 +148,6 @@ GridHit RaySceneIntersection(Ray ray, vec3 gridPos, float gridScale){
 	vec3 t_next = ((curr_voxel+max(step, ivec3(0)))*voxel_size-ray_start)*ray.inverse_dir;
 	vec3 t_delta = voxel_size*abs(ray.inverse_dir);
 
-	float dist = 0.;
 	bvec3 mask;
 
 	int iter = 0, brickIter = 0;
@@ -164,7 +163,6 @@ GridHit RaySceneIntersection(Ray ray, vec3 gridPos, float gridScale){
 
 		t_next += vec3(mask) * t_delta;
 		curr_voxel += ivec3(mask) * step;
-		dist = min(min(t_next.x, t_next.y), t_next.z);
 	}
 
 	uint cell = GetBrickMapCell(curr_voxel);
