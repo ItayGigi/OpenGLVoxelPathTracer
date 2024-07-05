@@ -78,7 +78,7 @@ struct GridHit{
 };
 
 // J. Amanatides, A. Woo. A Fast Voxel Traversal Algorithm for Ray Tracing.
-GridHit RayGridIntersection(Ray ray, int grid, vec3 gridPos, float gridScale){
+GridHit RayBrickIntersection(Ray ray, int grid, vec3 gridPos, float gridScale){
 	GridHit noHit = GridHit(false, -1., ivec3(-1), Material(vec3(0.), 0., 0.), 0);
 
 	SlabIntersection boundHit = RaySlabIntersection(ray, gridPos, gridPos + vec3(gridScale));
@@ -155,7 +155,7 @@ GridHit RaySceneIntersection(Ray ray, vec3 gridPos, float gridScale){
 	while(last_voxel != curr_voxel && iter++ < int(MapSize.x + MapSize.y + MapSize.z)) {
 		uint cell = GetBrickMapCell(curr_voxel);
 		if (cell != 0u){
-			GridHit hit = RayGridIntersection(ray, int(cell), gridPos + curr_voxel*gridScale, gridScale);
+			GridHit hit = RayBrickIntersection(ray, int(cell), gridPos + curr_voxel*gridScale, gridScale);
 			brickIter += hit.additional;
 			if (hit.hit) return GridHit(true, hit.dist, hit.normal, hit.mat, iter + brickIter);
 		}
@@ -169,7 +169,7 @@ GridHit RaySceneIntersection(Ray ray, vec3 gridPos, float gridScale){
 
 	uint cell = GetBrickMapCell(curr_voxel);
 	if (cell != 0u){
-		GridHit hit = RayGridIntersection(ray, int(cell), gridPos + curr_voxel*gridScale, gridScale);
+		GridHit hit = RayBrickIntersection(ray, int(cell), gridPos + curr_voxel*gridScale, gridScale);
 		brickIter += hit.additional;
 		if (hit.hit) return GridHit(true, hit.dist, hit.normal, hit.mat, iter + brickIter);
 	}
