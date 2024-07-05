@@ -20,6 +20,7 @@ uniform usampler2D MatsTex;
 struct Ray{
 	vec3 origin;
 	vec3 dir;
+	vec3 inverse_dir;
 };
 
 struct Material{
@@ -55,27 +56,11 @@ Material GetMaterial(int brickIndex, int matIndex){
 	return Material(color, 0., 0.);
 }
 
-float RaySphereIntersection(Ray ray, Sphere sphere){
-	vec3 origin = ray.origin - sphere.pos;
-
-	float a = dot(ray.dir, ray.dir);
-	float b = 2*dot(origin, ray.dir);
-	float c = dot(origin, origin) - sphere.radius*sphere.radius;
-
-	float discriminant = b*b - 4*a*c;
-
-	if (discriminant < 0) return -1.;
-
-	return (-b - sqrt(discriminant))/(2*a);
-}
-
 struct SlabIntersection{bool hit; float tmin; float tmax; bvec3 normal;};
 
 SlabIntersection RaySlabIntersection(Ray ray, vec3 minpos, vec3 maxpos){
-  vec3 inverse_dir = 1.0 / ray.dir;
-	
-  vec3 tbot = inverse_dir * (minpos - ray.origin);
-  vec3 ttop = inverse_dir * (maxpos - ray.origin);
+  vec3 tbot = ray.inverse_dir * (minpos - ray.origin);
+  vec3 ttop = ray.inverse_dir * (maxpos - ray.origin);
 
   vec3 dmin = min(ttop, tbot);
   vec3 dmax = max(ttop, tbot);
@@ -117,8 +102,8 @@ GridHit RayGridIntersection(Ray ray, int grid, vec3 gridPos, float gridScale){
 
 	ivec3 step = ivec3(sign(ray.dir));
 
-	vec3 t_next = ((curr_voxel+max(step, ivec3(0)))*voxel_size-ray_start)/ray.dir;
-	vec3 t_delta = voxel_size/abs(ray.dir);
+	vec3 t_next = ((curr_voxel+max(step, ivec3(0)))*voxel_size-ray_start)*ray.inverse_dir;
+	vec3 t_delta = voxel_size*abs(ray.inverse_dir);
 
 	float dist = 0.;
 	bvec3 mask = boundHit.normal;
@@ -164,8 +149,8 @@ GridHit RaySceneIntersection(Ray ray, vec3 gridPos, float gridScale){
 
 	ivec3 step = ivec3(sign(ray.dir));
 
-	vec3 t_next = ((curr_voxel+max(step, ivec3(0)))*voxel_size-ray_start)/ray.dir;
-	vec3 t_delta = voxel_size/abs(ray.dir);
+	vec3 t_next = ((curr_voxel+max(step, ivec3(0)))*voxel_size-ray_start)*ray.inverse_dir;
+	vec3 t_delta = voxel_size*abs(ray.inverse_dir);
 
 	float dist = 0.;
 	bvec3 mask;
@@ -209,7 +194,7 @@ void main()
 
 	vec3 dir = (CamRotation * vec4(TexCoord.x*aspect, TexCoord.y, 1.5, 1.)).xyz;
 
-	Ray ray = Ray(CamPosition, normalize(dir));
+	Ray ray = Ray(CamPosition, normalize(dir), 1.0/normalize(dir));
 
 	GridHit hit = RaySceneIntersection(ray, vec3(0.), 1.);
 
