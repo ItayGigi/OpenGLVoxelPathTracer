@@ -36,15 +36,11 @@ struct Sphere{
 };
 
 uint GetBrickMapCell(ivec3 loc){
-	if (loc.x < 0 || loc.x >= int(MapSize.x) || loc.y < 0 || loc.y >= int(MapSize.y) || loc.z < 0 || loc.z >= int(MapSize.z)) return 0u;
-
 	uint row = texelFetch(BrickMap, ivec2(loc.x*int(MapSize.y)/8 + loc.y/8, loc.z), 0).r;
 	return (row >> (loc.y%8)*4) & 0xFu;
 }
 
 uint GetBrickCell(int brick, ivec3 loc){
-	if (loc.x < 0 || loc.x >= BRICK_RES || loc.y < 0 || loc.y >= BRICK_RES || loc.z < 0 || loc.z >= BRICK_RES) return 0u;
-
 	uint row = texelFetch(BricksTex, ivec3(loc.x, loc.z, brick-1), 0).r;
 	return (row >> loc.y*4) & 0xFu;
 }
