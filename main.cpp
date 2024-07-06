@@ -23,14 +23,14 @@ void updateFPS(GLFWwindow* window);
 int windowWidth = 1000, windowHeight = 700;
 
 // camera
-Camera camera(glm::vec3(6.0f, 6.0f, 100.0f));
+Camera camera(glm::vec3(9.0f, 6.0f, 9.0f));
 float lastX = windowWidth / 2.0f;
 float lastY = windowHeight / 2.0f;
 bool firstMouse = true;
 
 // scene
 const char* bricks[2] = { "bricks/block.vox", "bricks/chair.vox" };
-const char* scenePath = "menger.vox";
+const char* scenePath = "map.vox";
 
 // timing
 float deltaTime = 0.0f;	// time between current frame and last frame
@@ -88,8 +88,8 @@ int main() {
 		return -1;
 	}
 
-	camera.Yaw = 150.0f;
-	camera.Pitch = 30.0f;
+	camera.Yaw = -135.0f;
+	camera.Pitch = -50.0f;
 
 	// render loop
 	while (!glfwWindowShouldClose(window))
