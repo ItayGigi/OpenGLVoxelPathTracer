@@ -32,8 +32,19 @@ float lastY = windowHeight / 2.0f;
 bool firstMouse = true;
 
 // scene
-const char* bricks[3] = { "bricks/block.vox", "bricks/chair.vox", "bricks/light.vox"};
+const char* bricks[3] = { "bricks/minecraft/lime_wool.vox", "bricks/chair.vox", "bricks/light.vox" };
 const char* scenePath = "menger.vox";
+
+//const char* bricks[8] = {
+//	"bricks/minecraft/white_concrete.vox",
+//	"bricks/minecraft/blue_wool.vox",
+//	"bricks/minecraft/light_blue_wool.vox",
+//	"bricks/minecraft/lime_wool.vox",
+//	"bricks/minecraft/orange_wool.vox",
+//	"bricks/minecraft/red_wool.vox",
+//	"bricks/minecraft/yellow_wool.vox",
+//	"bricks/minecraft/light.vox" };
+//const char* scenePath = "minecraft.vox";
 
 // timing
 float deltaTime = 0.0f;	// time between current frame and last frame
