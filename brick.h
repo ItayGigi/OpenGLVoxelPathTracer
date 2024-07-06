@@ -90,6 +90,11 @@ public:
 struct Material
 {
 	uint32_t color;
+	uint16_t emission;
+	uint16_t roughness;
+
+	Material(){}
+	Material(uint32_t _color, uint16_t _emission, uint16_t _roughness) : color(_color), emission(_emission), roughness(_roughness) {}
 };
 
 class Brick
@@ -126,10 +131,15 @@ public:
 				voxel_data[i] = pallet_to_my_mat[voxel_data[i]];
 			else { // assign new material
 				ogt_vox_rgba color = scene->palette.color[voxel_data[i]];
-				mats[matCount] = { (unsigned int)(color.r) << 24 | (unsigned int)(color.g) << 16 | (unsigned int)(color.b) << 8 | (unsigned int)(color.a) };
+
+				mats[matCount] = Material(
+					(unsigned int)(color.r) << 24 | (unsigned int)(color.g) << 16 | (unsigned int)(color.b) << 8 | (unsigned int)(color.a),
+					scene->materials.matl[voxel_data[i]].emit*100.0f,
+					0
+				);
+
 				pallet_to_my_mat[voxel_data[i]] = matCount;
 				voxel_data[i] = matCount;
-
 				matCount++;
 			}
 		}

@@ -29,7 +29,7 @@ float lastY = windowHeight / 2.0f;
 bool firstMouse = true;
 
 // scene
-const char* bricks[2] = { "bricks/block.vox", "bricks/chair.vox" };
+const char* bricks[3] = { "bricks/block.vox", "bricks/chair.vox", "bricks/light.vox"};
 const char* scenePath = "map.vox";
 
 // timing
@@ -79,7 +79,7 @@ int main() {
 
 	// load scene
 	unsigned int sceneTex, bricksTex, matsTex;
-	if (!loadScene(shader, scenePath, bricks, 2, &sceneTex, &bricksTex, &matsTex)) {
+	if (!loadScene(shader, scenePath, bricks, sizeof(bricks) / sizeof(char*), &sceneTex, &bricksTex, &matsTex)) {
 		std::cerr << "failed to load scene. exiting" << std::endl;
 		glDeleteTextures(1, &sceneTex);
 		glDeleteTextures(1, &sceneTex);
@@ -283,7 +283,7 @@ bool loadScene(Shader shader, const char* brickmapPath, const char* brickNames[]
 		for (int j = 1; j < brick.matCount; j++) // load all brick's materials
 		{
 			matsData[(i * 16 + j) * 2 + 0] = brick.mats[j].color >> 8;
-			matsData[(i * 16 + j) * 2 + 1] = 0;
+			matsData[(i * 16 + j) * 2 + 1] = brick.mats[j].emission;
 		}
 	}
 

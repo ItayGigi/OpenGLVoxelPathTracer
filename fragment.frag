@@ -77,10 +77,10 @@ uint GetBrickCell(int brick, ivec3 loc){
 }
 
 Material GetMaterial(int brickIndex, int matIndex){
-	uint val = texelFetch(MatsTex, ivec2(matIndex, brickIndex), 0).r;
-	vec3 color = vec3(float((val >> 16) & 0xFFu)/255., float((val >> 8) & 0xFFu)/255., float((val >> 0) & 0xFFu)/255.);
-
-	return Material(color, 1., 0.);
+	uvec4 val = texelFetch(MatsTex, ivec2(matIndex, brickIndex), 0);
+	vec3 color = vec3(float((val.r >> 16) & 0xFFu)/255., float((val.r >> 8) & 0xFFu)/255., float((val.r >> 0) & 0xFFu)/255.);
+	float emission = (val.g & 0xFFFFu);
+	return Material(color, 1., emission);
 }
 
 vec4 TestBrick(int brick, vec2 coords){
@@ -221,14 +221,14 @@ vec3 Trace(Ray ray){
 		GridHit hitInfo = RaySceneIntersection(ray, vec3(0.), 1.);
 
 		if (!hitInfo.hit){
-			vec3 skyColor = vec3(1.);
-			return rayColor * skyColor;
+			vec3 skyColor = vec3(0.13);
+			return incomingLight + rayColor * skyColor;
 		}
 
 		if (hitInfo.mat.emission == 0.)
 			rayColor *= hitInfo.mat.color;
 		else
-			incomingLight += rayColor * hitInfo.mat.emission * hitInfo.mat.color;
+			return rayColor * hitInfo.mat.emission * hitInfo.mat.color;
 
 		ray.origin += ray.dir*hitInfo.dist + hitInfo.normal*EPSILON;
 		
@@ -252,9 +252,9 @@ void main()
 
 	float aspect = float(Resolution.x)/float(Resolution.y);
 
-	vec3 dir = (CamRotation * vec4(TexCoord.x*aspect, TexCoord.y, 1.5, 1.)).xyz;
+	vec3 dir = normalize((CamRotation * vec4(TexCoord.x*aspect, TexCoord.y, 1.5, 1.)).xyz);
 
-	Ray ray = Ray(CamPosition, normalize(dir), 1.0/normalize(dir));
+	Ray ray = Ray(CamPosition, dir, 1.0/dir);
 
 	FragColor = vec4(0.);
 
@@ -262,21 +262,4 @@ void main()
 
 	FragColor /= 10.;
 	return;
-
-	GridHit hit = RaySceneIntersection(ray, vec3(0.), 1.);
-
-	//FragColor = vec4(hit.additional/100.);
-	//return;
-
-	if (!hit.hit){
-		vec4 topColor = vec4(0.34, 0.34, 0.34, 1.0);
-		vec4 bottomColor = vec4(0.0, 0.0, 0.0, 1.0);
-		FragColor = mix(bottomColor, topColor, atan(ray.dir.y)/2*3.14159);
-		return;
-	}
-
-	//FragColor = vec4(hit.voxelIndex/8., 1.);
-	//FragColor = vec4((ray.origin + ray.dir*hit.dist)/10., 1.);
-	float light = dot(hit.normal, normalize(vec3(1.5, 2., 1.)))/2.+0.5;
-	FragColor = vec4(light*hit.mat.color, 1.);
 }
