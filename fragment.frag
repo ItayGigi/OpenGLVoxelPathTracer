@@ -16,6 +16,7 @@ uniform usampler2D MatsTex;
 
 #define BRICK_RES 8
 #define EPSILON 0.00001
+#define SAMPLES 10
 
 uint ns;
 //#define INIT_RNG ns = uint(frame)*uint(Resolution.x*Resolution.y)+uint(TexCoord.x+TexCoord.y*Resolution.x)
@@ -79,7 +80,7 @@ uint GetBrickCell(int brick, ivec3 loc){
 Material GetMaterial(int brickIndex, int matIndex){
 	uvec4 val = texelFetch(MatsTex, ivec2(matIndex, brickIndex), 0);
 	vec3 color = vec3(float((val.r >> 16) & 0xFFu)/255., float((val.r >> 8) & 0xFFu)/255., float((val.r >> 0) & 0xFFu)/255.);
-	float emission = (val.g & 0xFFFFu);
+	float emission = (val.g & 0xFFFFu)/5.;
 	return Material(color, 1., emission);
 }
 
@@ -221,14 +222,14 @@ vec3 Trace(Ray ray){
 		GridHit hitInfo = RaySceneIntersection(ray, vec3(0.), 1.);
 
 		if (!hitInfo.hit){
-			vec3 skyColor = vec3(0.13);
+			vec3 skyColor = vec3(0.07);
 			return incomingLight + rayColor * skyColor;
 		}
 
 		if (hitInfo.mat.emission == 0.)
 			rayColor *= hitInfo.mat.color;
 		else
-			return rayColor * hitInfo.mat.emission * hitInfo.mat.color;
+			incomingLight += rayColor * hitInfo.mat.emission * hitInfo.mat.color;
 
 		ray.origin += ray.dir*hitInfo.dist + hitInfo.normal*EPSILON;
 		
@@ -246,6 +247,15 @@ vec3 Trace(Ray ray){
 	return incomingLight;
 }
 
+vec3 ACES(const vec3 x) {
+	const float a = 2.51;
+	const float b = 0.03;
+	const float c = 2.43;
+	const float d = 0.59;
+	const float e = 0.14;
+	return (x * (a * x + b)) / (x * (c * x + d) + e);
+}
+
 void main()
 {
 	INIT_RNG;
@@ -256,10 +266,13 @@ void main()
 
 	Ray ray = Ray(CamPosition, dir, 1.0/dir);
 
-	FragColor = vec4(0.);
+	vec3 sumColor = vec3(0.);
 
-	for (int s = 0; s < 10; s++) FragColor += vec4(Trace(ray), 1.);
+	for (int s = 0; s < SAMPLES; s++) sumColor += Trace(ray);
 
-	FragColor /= 10.;
+	vec3 color = ACES(sumColor/SAMPLES); // tonemapping
+	color = pow(color, vec3(1.0/2.2)); // gamma correction
+
+	FragColor = vec4(color, 1.);
 	return;
 }
