@@ -262,13 +262,13 @@ void main()
 
 	float aspect = float(Resolution.x)/float(Resolution.y);
 
-	vec3 dir = normalize((CamRotation * vec4(TexCoord.x*aspect, TexCoord.y, 1.5, 1.)).xyz);
-
-	Ray ray = Ray(CamPosition, dir, 1.0/dir);
-
 	vec3 sumColor = vec3(0.);
+	for (int s = 0; s < SAMPLES; s++) {
+		vec3 dir = normalize((CamRotation * vec4(TexCoord.x*aspect + (2.*rand()-1.)/Resolution.y, TexCoord.y + (2.*rand()-1.)/Resolution.y, 1.5, 1.)).xyz);
+		Ray ray = Ray(CamPosition, dir, 1.0/dir);
 
-	for (int s = 0; s < SAMPLES; s++) sumColor += Trace(ray);
+		sumColor += Trace(ray);
+	}
 
 	vec3 color = ACES(sumColor/SAMPLES); // tonemapping
 	color = pow(color, vec3(1.0/2.2)); // gamma correction
