@@ -55,6 +55,18 @@ vec3 RandomInHemisphere(vec2 uv)
 	return vec3(disk.x, sqrt(max(0.0, 1.0 - dot(disk, disk))), disk.y);
 }
 
+vec3 CosWeightedRandomHemisphereDirection( const vec3 n ) {
+  lowp vec2 r = rand2();
+	lowp vec3  uu = normalize( cross( n, vec3(0.0,1.0,1.0) ) );
+	lowp vec3  vv = cross( uu, n );
+	lowp float ra = sqrt(r.y);
+	lowp float rx = ra*cos(6.2831*r.x); 
+	lowp float ry = ra*sin(6.2831*r.x);
+	lowp float rz = sqrt( 1.0-r.y );
+	lowp vec3  rr = vec3( rx*uu + ry*vv + rz*n );
+  return normalize( rr );
+}
+
 struct Ray{
 	vec3 origin;
 	vec3 dir;
@@ -233,10 +245,7 @@ vec3 Trace(Ray ray){
 
 		ray.origin += ray.dir*hitInfo.dist + hitInfo.normal*EPSILON;
 		
-		vec3 randDir = RandomInHemisphere(rand2());
-		vec3 diffuseDir = randDir * sign(hitInfo.normal.y);
-		if (hitInfo.normal.x != 0) diffuseDir = randDir.yxz * sign(hitInfo.normal.x);
-		else if (hitInfo.normal.z != 0) diffuseDir = randDir.xzy * sign(hitInfo.normal.z);
+		vec3 diffuseDir = CosWeightedRandomHemisphereDirection(hitInfo.normal);
 
 		vec3 specularDir = reflect(ray.dir, vec3(hitInfo.normal));
 
