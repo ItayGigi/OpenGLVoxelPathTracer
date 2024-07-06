@@ -1,9 +1,14 @@
 #version 330 core
 
-out vec4 FragColor;
+out vec3 FragColor;
 
 in vec2 TexCoord;
+uniform sampler2D LastFrameTex;
+
 uniform uvec2 Resolution;
+uniform uint FrameCount;
+uniform uint AccumulatedFramesCount;
+
 uniform uvec3 MapSize;
 
 uniform mat4 CamRotation;
@@ -16,11 +21,11 @@ uniform usampler2D MatsTex;
 
 #define BRICK_RES 8
 #define EPSILON 0.00001
-#define SAMPLES 10
+#define SAMPLES 1
 
 uint ns;
 //#define INIT_RNG ns = uint(frame)*uint(Resolution.x*Resolution.y)+uint(TexCoord.x+TexCoord.y*Resolution.x)
-#define INIT_RNG ns = uint(Resolution.x*Resolution.y)+uint((0.5*TexCoord.x+0.5)*Resolution.x+(0.5*TexCoord.y+0.5)*Resolution.x*Resolution.y)
+#define INIT_RNG ns = uint(FrameCount)*uint(Resolution.x*Resolution.y)+uint((0.5*TexCoord.x+0.5)*Resolution.x+(0.5*TexCoord.y+0.5)*Resolution.x*Resolution.y)
 
 // PCG Random Number Generator
 void pcg()
@@ -35,25 +40,6 @@ float rand(){pcg(); return float(ns)/float(0xffffffffU);}
 vec2 rand2(){return vec2(rand(), rand());}
 vec3 rand3(){return vec3(rand(), rand(), rand());}
 vec4 rand4(){return vec4(rand(), rand(), rand(), rand());}
-
-float RandomNumberNormalDist(){
-	float theta = 2 * 3.1415926 * rand();
-	float rho = sqrt(-2 * log(rand()));
-	return rho * cos(theta);
-}
-
-vec2 SampleDisc(vec2 uv)
-{
-	float theta = 2.0 * 3.141592653589 * uv.x;
-	float r = sqrt(uv.y);
-	return vec2(cos(theta), sin(theta)) * r;
-}
-
-vec3 RandomInHemisphere(vec2 uv)
-{
-	vec2 disk = SampleDisc(uv);
-	return vec3(disk.x, sqrt(max(0.0, 1.0 - dot(disk, disk))), disk.y);
-}
 
 vec3 CosWeightedRandomHemisphereDirection( const vec3 n ) {
   lowp vec2 r = rand2();
@@ -234,7 +220,7 @@ vec3 Trace(Ray ray){
 		GridHit hitInfo = RaySceneIntersection(ray, vec3(0.), 1.);
 
 		if (!hitInfo.hit){
-			vec3 skyColor = vec3(0.07);
+			vec3 skyColor = vec3(1.0);
 			return incomingLight + rayColor * skyColor;
 		}
 
@@ -279,9 +265,11 @@ void main()
 		sumColor += Trace(ray);
 	}
 
-	vec3 color = ACES(sumColor/SAMPLES); // tonemapping
+	vec3 color = sumColor/SAMPLES;
+	color = ACES(color); // tonemapping
 	color = pow(color, vec3(1.0/2.2)); // gamma correction
 
-	FragColor = vec4(color, 1.);
+	//FragColor = texture(LastFrameTex, TexCoord*0.5+0.5).rgb;//texelFetch(MatsTex, ivec2((TexCoord*0.5+0.5)*Resolution), 0);
+	FragColor = mix(texture(LastFrameTex, TexCoord*0.5+0.5).rgb, color, 1.0/(AccumulatedFramesCount+1u));
 	return;
 }

@@ -24,18 +24,22 @@ int windowWidth = 1000, windowHeight = 700;
 
 // camera
 Camera camera(glm::vec3(9.0f, 6.0f, 9.0f));
+glm::vec3 lastCamPos(0.0f, 0.0f, 0.0f);
+glm::vec3 lastCamFront(0.0f, 0.0f, 0.0f);
+
 float lastX = windowWidth / 2.0f;
 float lastY = windowHeight / 2.0f;
 bool firstMouse = true;
 
 // scene
 const char* bricks[3] = { "bricks/block.vox", "bricks/chair.vox", "bricks/light.vox"};
-const char* scenePath = "map.vox";
+const char* scenePath = "menger.vox";
 
 // timing
 float deltaTime = 0.0f;	// time between current frame and last frame
 float lastFrameTime = 0.0f;
 unsigned int frameCount = 0;
+unsigned int framesSinceLastMoved = 0;
 
 // fps
 float frameTimesSum = 0.0f;
@@ -82,7 +86,7 @@ int main() {
 	if (!loadScene(shader, scenePath, bricks, sizeof(bricks) / sizeof(char*), &sceneTex, &bricksTex, &matsTex)) {
 		std::cerr << "failed to load scene. exiting" << std::endl;
 		glDeleteTextures(1, &sceneTex);
-		glDeleteTextures(1, &sceneTex);
+		glDeleteTextures(1, &bricksTex);
 		glDeleteTextures(1, &matsTex);
 		glfwTerminate();
 		return -1;
@@ -91,10 +95,57 @@ int main() {
 	camera.Yaw = -135.0f;
 	camera.Pitch = -50.0f;
 
+	unsigned int fbo1, fbo2;
+	glGenFramebuffers(1, &fbo1);
+	glGenFramebuffers(1, &fbo2);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, fbo1);
+
+	// generate texture
+	unsigned int screenTex1;
+	glGenTextures(1, &screenTex1);
+	glActiveTexture(GL_TEXTURE0 + 5);
+	glBindTexture(GL_TEXTURE_2D, screenTex1);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, windowWidth, windowHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+	// attach it to currently bound framebuffer object
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, screenTex1, 0);
+
+	unsigned int attachments[1] = { GL_COLOR_ATTACHMENT0 };
+	glDrawBuffers(1, attachments);
+
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+		std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
+
+	glBindFramebuffer(GL_FRAMEBUFFER, fbo2);
+
+	// generate texture
+	unsigned int screenTex2;
+	glGenTextures(1, &screenTex2);
+	glActiveTexture(GL_TEXTURE0 + 5);
+	glBindTexture(GL_TEXTURE_2D, screenTex2);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, windowWidth, windowHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+	// attach it to currently bound framebuffer object
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, screenTex2, 0);
+	glDrawBuffers(1, attachments);
+
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+		std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
+
+	glBindBuffer(GL_FRAMEBUFFER, 0);
+
 	// render loop
 	while (!glfwWindowShouldClose(window))
 	{
 		frameCount++;
+		framesSinceLastMoved++;
 		float currentFrameTime = static_cast<float>(glfwGetTime());
 		deltaTime = currentFrameTime - lastFrameTime;
 		lastFrameTime = currentFrameTime;
@@ -103,15 +154,38 @@ int main() {
 
 		processInput(window);
 
+		if (camera.Position != lastCamPos || camera.Front != lastCamFront) {
+			lastCamPos = camera.Position;
+			lastCamFront = camera.Front;
+			framesSinceLastMoved = 0;
+		}
+
+		glBindFramebuffer(GL_FRAMEBUFFER, fbo1);
+		glClear(GL_COLOR_BUFFER_BIT);
+
+		glActiveTexture(GL_TEXTURE0 + 5);
+		glBindTexture(GL_TEXTURE_2D, screenTex2);
+		shader.use();
+		glUniform1i(glGetUniformLocation(shader.ID, "LastFrameTex"), 5);
+
 		draw(shader, VAO);
+
+		glBindFramebuffer(GL_READ_FRAMEBUFFER, fbo1);
+		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+		glBlitFramebuffer(0, 0, windowWidth, windowHeight, 0, 0, windowWidth, windowHeight, GL_COLOR_BUFFER_BIT, GL_LINEAR);
+
+		std::swap(fbo1, fbo2);
+		std::swap(screenTex1, screenTex2);
 
 		glfwPollEvents();
 		glfwSwapBuffers(window);
 	}
 
 	glDeleteTextures(1, &sceneTex);
-	glDeleteTextures(1, &sceneTex);
+	glDeleteTextures(1, &bricksTex);
 	glDeleteTextures(1, &matsTex);
+	glDeleteTextures(1, &screenTex1);
+	glDeleteTextures(1, &screenTex2);
 
 	glfwTerminate();
 	return 0;
@@ -232,6 +306,9 @@ void draw(Shader shader, unsigned int VAO) {
 
 	shader.setUVec2("Resolution", windowWidth, windowHeight);
 
+	shader.setUInt("FrameCount", frameCount);
+	shader.setUInt("AccumulatedFramesCount", framesSinceLastMoved);
+
 	glBindVertexArray(VAO);
 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 }
@@ -289,7 +366,6 @@ bool loadScene(Shader shader, const char* brickmapPath, const char* brickNames[]
 
 	shader.use();
 	glUniform1i(glGetUniformLocation(shader.ID, "BricksTex"), 1);
-
 
 	// materials
 	glGenTextures(1, matsTexture);
