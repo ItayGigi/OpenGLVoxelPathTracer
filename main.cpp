@@ -32,7 +32,7 @@ float lastY = windowHeight / 2.0f;
 bool firstMouse = true;
 
 // scene
-const char* bricks[3] = { "bricks/minecraft/lime_wool.vox", "bricks/chair.vox", "bricks/light.vox" };
+const char* bricks[3] = { "bricks/chair.vox", "bricks/chair.vox", "bricks/light.vox" };
 const char* scenePath = "menger.vox";
 
 //const char* bricks[8] = {
@@ -55,7 +55,7 @@ unsigned int framesSinceLastMoved = 0;
 // fps
 float frameTimesSum = 0.0f;
 std::queue<float> lastFrameTimes;
-int fpsAverageAmount = 300;
+int fpsAverageAmount = 150;
 
 int main() {
 	// initialize glfw
@@ -76,7 +76,7 @@ int main() {
 	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 	glfwSetCursorPosCallback(window, mouse_callback);
 	glfwSetScrollCallback(window, scroll_callback);
-	glfwSwapInterval(0);
+	glfwSwapInterval(0); //VSYNC
 
 	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
