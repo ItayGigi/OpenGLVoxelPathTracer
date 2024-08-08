@@ -80,7 +80,7 @@ uint GetBrickCell(int brick, ivec3 loc){
 Material GetMaterial(int brickIndex, int matIndex){
 	uvec4 val = texelFetch(MatsTex, ivec2(matIndex, brickIndex), 0);
 	vec3 color = vec3(float((val.r >> 16) & 0xFFu)/255., float((val.r >> 8) & 0xFFu)/255., float((val.r >> 0) & 0xFFu)/255.);
-	float emission = (val.g & 0xFFFFu);
+	float emission = (val.g & 0xFFFFu)/50.;
 	return Material(color, 1., emission);
 }
 
@@ -296,8 +296,6 @@ void main()
 	}
 
 	vec3 color = sumColor/SAMPLES;
-	//color = ACES(color); // tonemapping
-	color = pow(color, vec3(1.0/2.2)); // gamma correction
 
 	//FragColor = texture(LastFrameTex, TexCoord*0.5+0.5).rgb;//texelFetch(MatsTex, ivec2((TexCoord*0.5+0.5)*Resolution), 0);
 	FragColor = mix(texture(LastFrameTex, TexCoord*0.5+0.5).rgb, color, 1.0/(AccumulatedFramesCount+1u));

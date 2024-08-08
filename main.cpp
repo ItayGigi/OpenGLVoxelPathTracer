@@ -91,6 +91,7 @@ int main() {
 	unsigned int VAO = createVAO();
 
 	Shader shader("vertex.vert", "fragment.frag");
+	Shader postProcessShader("vertex.vert", "postprocessing.frag");
 
 	// load scene
 	unsigned int sceneTex, bricksTex, matsTex;
@@ -181,9 +182,14 @@ int main() {
 
 		draw(shader, VAO);
 
-		glBindFramebuffer(GL_READ_FRAMEBUFFER, fbo1);
-		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-		glBlitFramebuffer(0, 0, windowWidth, windowHeight, 0, 0, windowWidth, windowHeight, GL_COLOR_BUFFER_BIT, GL_LINEAR);
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		postProcessShader.use();
+		glActiveTexture(GL_TEXTURE0 + 5);
+		glBindTexture(GL_TEXTURE_2D, screenTex1);
+		glUniform1i(glGetUniformLocation(postProcessShader.ID, "Texture"), 5);
+		
+		glBindVertexArray(VAO);
+		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
 		std::swap(fbo1, fbo2);
 		std::swap(screenTex1, screenTex2);
