@@ -58,6 +58,7 @@ void encodeData(const uint8_t* voxel_data, uint32_t* data_arr, unsigned int size
 class BrickMap
 {
 public:
+	glm::vec3 env_color;
 	unsigned int size_x, size_y, size_z;
 	uint32_t* data = NULL;
 
@@ -80,6 +81,8 @@ public:
 
 		data = new uint32_t[size_x*size_y*size_z/8];
 		encodeData(model->voxel_data, data, size_x, size_y, size_z);
+
+		env_color = glm::vec3(scene->palette.color[255].r, scene->palette.color[255].g, scene->palette.color[255].b) * scene->materials.matl[255].emit * (float)pow(10, scene->materials.matl[255].flux) / 256.0f;
 	}
 	
 	~BrickMap() {
@@ -134,7 +137,7 @@ public:
 
 				mats[matCount] = Material(
 					(unsigned int)(color.r) << 24 | (unsigned int)(color.g) << 16 | (unsigned int)(color.b) << 8 | (unsigned int)(color.a),
-					scene->materials.matl[voxel_data[i]].emit*100.0f,
+					scene->materials.matl[voxel_data[i]].emit*100.0f*pow(10, scene->materials.matl[voxel_data[i]].flux),
 					0
 				);
 

@@ -19,6 +19,8 @@ uniform usampler2D BrickMap;
 uniform usampler2DArray BricksTex;
 uniform usampler2D MatsTex;
 
+uniform vec3 EnvironmentColor;
+
 #define BRICK_RES 8
 #define EPSILON 0.00001
 #define SAMPLES 1.
@@ -78,7 +80,7 @@ uint GetBrickCell(int brick, ivec3 loc){
 Material GetMaterial(int brickIndex, int matIndex){
 	uvec4 val = texelFetch(MatsTex, ivec2(matIndex, brickIndex), 0);
 	vec3 color = vec3(float((val.r >> 16) & 0xFFu)/255., float((val.r >> 8) & 0xFFu)/255., float((val.r >> 0) & 0xFFu)/255.);
-	float emission = (val.g & 0xFFFFu)/5.;
+	float emission = (val.g & 0xFFFFu);
 	return Material(color, 1., emission);
 }
 
@@ -220,8 +222,8 @@ vec3 Trace(Ray ray){
 		GridHit hitInfo = RaySceneIntersection(ray, vec3(0.), 1.);
 
 		if (!hitInfo.hit){
-			vec3 skyColor = vec3(5.0);
-			return incomingLight + rayColor * skyColor;
+			//vec3 skyColor = vec3(0.0);
+			return incomingLight + rayColor * EnvironmentColor;
 		}
 
 		if (hitInfo.mat.emission == 0.)
@@ -267,9 +269,9 @@ float RaySphereIntersection(Ray ray, vec3 pos, float radius) {
 
 void main()
 {
-	if (TexCoord.y > 0.95){
-		FragColor = vec3(0.);
-		if (TexCoord.x*0.5 + 0.5 < float(AccumulatedFramesCount)/200.) FragColor = vec3(0.11, 0.63, 0.87);
+	if (TexCoord.y > 0.98){
+		FragColor = vec3(0.0);
+		if (TexCoord.x*0.5 + 0.5 < float(AccumulatedFramesCount)/1000.) FragColor = vec3(0.11, 0.63, 0.87);
 		return;
 	}
 
