@@ -21,18 +21,18 @@ uniform usampler2D MatsTex;
 
 #define BRICK_RES 8
 #define EPSILON 0.00001
-#define SAMPLES 1
+#define SAMPLES 1.
 
 uint ns;
 //#define INIT_RNG ns = uint(frame)*uint(Resolution.x*Resolution.y)+uint(TexCoord.x+TexCoord.y*Resolution.x)
-#define INIT_RNG ns = uint(FrameCount)*uint(Resolution.x*Resolution.y)+uint((0.5*TexCoord.x+0.5)*Resolution.x+(0.5*TexCoord.y+0.5)*Resolution.x*Resolution.y)
+#define INIT_RNG ns = FrameCount*uint(Resolution.x*Resolution.y)+uint((0.5*TexCoord.x+0.5)*Resolution.x+(0.5*TexCoord.y+0.5)*Resolution.x*Resolution.y)
 
 // PCG Random Number Generator
 void pcg()
 {
-		uint state = ns*747796405U+2891336453U;
-		uint word  = ((state >> ((state >> 28U) + 4U)) ^ state)*277803737U;
-		ns = (word >> 22U) ^ word;
+	uint state = ns*747796405U+2891336453U;
+	uint word  = ((state >> ((state >> 28U) + 4U)) ^ state)*277803737U;
+	ns = (word >> 22U) ^ word;
 }
 
 // Random Floating-Point Scalars/Vectors
@@ -42,14 +42,14 @@ vec3 rand3(){return vec3(rand(), rand(), rand());}
 vec4 rand4(){return vec4(rand(), rand(), rand(), rand());}
 
 vec3 CosWeightedRandomHemisphereDirection( const vec3 n ) {
-  lowp vec2 r = rand2();
-	lowp vec3  uu = normalize( cross( n, vec3(0.0,1.0,1.0) ) );
-	lowp vec3  vv = cross( uu, n );
-	lowp float ra = sqrt(r.y);
-	lowp float rx = ra*cos(6.2831*r.x); 
-	lowp float ry = ra*sin(6.2831*r.x);
-	lowp float rz = sqrt( 1.0-r.y );
-	lowp vec3  rr = vec3( rx*uu + ry*vv + rz*n );
+  vec2 r = rand2();
+	vec3  uu = normalize( cross( n, vec3(0.0,1.0,1.0) ) );
+	vec3  vv = cross( uu, n );
+	float ra = sqrt(r.y);
+	float rx = ra*cos(6.2831*r.x); 
+	float ry = ra*sin(6.2831*r.x);
+	float rz = sqrt( 1.0-r.y );
+	vec3  rr = vec3( rx*uu + ry*vv + rz*n );
   return normalize( rr );
 }
 
@@ -220,7 +220,7 @@ vec3 Trace(Ray ray){
 		GridHit hitInfo = RaySceneIntersection(ray, vec3(0.), 1.);
 
 		if (!hitInfo.hit){
-			vec3 skyColor = vec3(1.0);
+			vec3 skyColor = vec3(5.0);
 			return incomingLight + rayColor * skyColor;
 		}
 
@@ -251,11 +251,39 @@ vec3 ACES(const vec3 x) {
 	return (x * (a * x + b)) / (x * (c * x + d) + e);
 }
 
+float RaySphereIntersection(Ray ray, vec3 pos, float radius) {
+	vec3 origin = ray.origin - pos;
+
+	float a = dot(ray.dir, ray.dir);
+	float b = 2*dot(origin, ray.dir);
+	float c = dot(origin, origin) - radius*radius;
+
+	float discriminant = b*b - 4*a*c;
+
+	if (discriminant < 0) return -1.;
+
+	return (-b - sqrt(discriminant))/(2*a);
+}
+
 void main()
 {
+	if (TexCoord.y > 0.95){
+		FragColor = vec3(0.);
+		if (TexCoord.x*0.5 + 0.5 < float(AccumulatedFramesCount)/200.) FragColor = vec3(0.11, 0.63, 0.87);
+		return;
+	}
+
 	INIT_RNG;
 
 	float aspect = float(Resolution.x)/float(Resolution.y);
+
+	// vec3 dir = normalize((CamRotation * vec4(TexCoord.x*aspect, TexCoord.y, 1.5, 1.)).xyz);
+	// Ray ray = Ray(CamPosition, dir, 1.0/dir);
+	// FragColor = vec3(0.);
+	// for	(int i = 0; i < 1500; i++){
+	// 	if (RaySphereIntersection(ray, CosWeightedRandomHemisphereDirection(normalize(vec3(1., 1., 1.))), 0.005) > 0.) FragColor = vec3(1.);
+	// }
+	// return;
 
 	vec3 sumColor = vec3(0.);
 	for (int s = 0; s < SAMPLES; s++) {
@@ -266,10 +294,11 @@ void main()
 	}
 
 	vec3 color = sumColor/SAMPLES;
-	color = ACES(color); // tonemapping
+	//color = ACES(color); // tonemapping
 	color = pow(color, vec3(1.0/2.2)); // gamma correction
 
 	//FragColor = texture(LastFrameTex, TexCoord*0.5+0.5).rgb;//texelFetch(MatsTex, ivec2((TexCoord*0.5+0.5)*Resolution), 0);
 	FragColor = mix(texture(LastFrameTex, TexCoord*0.5+0.5).rgb, color, 1.0/(AccumulatedFramesCount+1u));
+	//FragColor = mix(texture(LastFrameTex, TexCoord*0.5+0.5).rgb, rand3(), 1.0/(AccumulatedFramesCount+1u));
 	return;
 }
