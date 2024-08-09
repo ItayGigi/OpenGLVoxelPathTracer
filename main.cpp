@@ -10,6 +10,8 @@
 
 #include <queue>
 
+#define VSYNC false
+
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
@@ -23,7 +25,7 @@ void updateFPS(GLFWwindow* window);
 int windowWidth = 1000, windowHeight = 700;
 
 // camera
-Camera camera(glm::vec3(9.0f, 6.0f, 9.0f));
+Camera camera;
 glm::vec3 lastCamPos(0.0f, 0.0f, 0.0f);
 glm::vec3 lastCamFront(0.0f, 0.0f, 0.0f);
 
@@ -32,7 +34,7 @@ float lastY = windowHeight / 2.0f;
 bool firstMouse = true;
 
 // scene
-const char* bricks[3] = { "bricks/frame.vox", "bricks/chair.vox", "bricks/light.vox" };
+const char* bricks[3] = { "bricks/block.vox", "bricks/chair.vox", "bricks/light.vox" };
 const char* scenePath = "menger.vox";
 
 //const char* bricks[8] = {
@@ -57,6 +59,10 @@ float frameTimesSum = 0.0f;
 std::queue<float> lastFrameTimes;
 int fpsAverageAmount = 150;
 
+// frame buffers
+unsigned int fbo1, fbo2;
+unsigned int screenTex1, screenTex2;
+
 int main() {
 	// initialize glfw
 	glfwInit();
@@ -76,7 +82,7 @@ int main() {
 	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 	glfwSetCursorPosCallback(window, mouse_callback);
 	glfwSetScrollCallback(window, scroll_callback);
-	glfwSwapInterval(0); //VSYNC
+	glfwSwapInterval(VSYNC);
 
 	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
@@ -104,54 +110,10 @@ int main() {
 		return -1;
 	}
 
-	camera.Yaw = -135.0f;
-	camera.Pitch = -50.0f;
-
-	unsigned int fbo1, fbo2;
 	glGenFramebuffers(1, &fbo1);
 	glGenFramebuffers(1, &fbo2);
 
-	glBindFramebuffer(GL_FRAMEBUFFER, fbo1);
-
-	// generate texture
-	unsigned int screenTex1;
-	glGenTextures(1, &screenTex1);
-	glActiveTexture(GL_TEXTURE0 + 5);
-	glBindTexture(GL_TEXTURE_2D, screenTex1);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, windowWidth, windowHeight, 0, GL_RGB, GL_FLOAT, NULL);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glBindTexture(GL_TEXTURE_2D, 0);
-
-	// attach it to currently bound framebuffer object
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, screenTex1, 0);
-
-	unsigned int attachments[1] = { GL_COLOR_ATTACHMENT0 };
-	glDrawBuffers(1, attachments);
-
-	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-		std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
-
-	glBindFramebuffer(GL_FRAMEBUFFER, fbo2);
-
-	// generate texture
-	unsigned int screenTex2;
-	glGenTextures(1, &screenTex2);
-	glActiveTexture(GL_TEXTURE0 + 5);
-	glBindTexture(GL_TEXTURE_2D, screenTex2);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, windowWidth, windowHeight, 0, GL_RGB, GL_FLOAT, NULL);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glBindTexture(GL_TEXTURE_2D, 0);
-
-	// attach it to currently bound framebuffer object
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, screenTex2, 0);
-	glDrawBuffers(1, attachments);
-
-	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-		std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
-
-	glBindBuffer(GL_FRAMEBUFFER, 0);
+	framebuffer_size_callback(window, windowWidth, windowHeight);
 
 	// render loop
 	while (!glfwWindowShouldClose(window))
@@ -213,6 +175,42 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 	glViewport(0, 0, width, height);
 	windowWidth = width;
 	windowHeight = height;
+
+	glBindFramebuffer(GL_FRAMEBUFFER, fbo1);
+
+	// generate texture
+	glGenTextures(1, &screenTex1);
+	glActiveTexture(GL_TEXTURE0 + 5);
+	glBindTexture(GL_TEXTURE_2D, screenTex1);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, windowWidth, windowHeight, 0, GL_RGB, GL_FLOAT, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+	// attach it to currently bound framebuffer object
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, screenTex1, 0);
+
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+		std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
+
+	glBindFramebuffer(GL_FRAMEBUFFER, fbo2);
+
+	// generate texture
+	glGenTextures(1, &screenTex2);
+	glActiveTexture(GL_TEXTURE0 + 5);
+	glBindTexture(GL_TEXTURE_2D, screenTex2);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, windowWidth, windowHeight, 0, GL_RGB, GL_FLOAT, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+	// attach it to currently bound framebuffer object
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, screenTex2, 0);
+
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+		std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
+
+	glBindBuffer(GL_FRAMEBUFFER, 0);
 }
 
 // process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
@@ -332,7 +330,7 @@ void draw(Shader shader, unsigned int VAO) {
 
 bool loadScene(Shader shader, const char* brickmapPath, const char* brickNames[], const unsigned int brickCount, unsigned int* mapTexture, unsigned int* bricksTexture, unsigned int* matsTexture) {
 	// map
-	BrickMap brickMap((std::string("assets/") + brickmapPath).c_str());
+	Scene brickMap((std::string("assets/") + brickmapPath).c_str());
 	if (!brickMap.data) return false; // failed to load brickmap
 
 	shader.use();
@@ -397,6 +395,8 @@ bool loadScene(Shader shader, const char* brickmapPath, const char* brickNames[]
 	delete[] matsData;
 
 	shader.setVec3("EnvironmentColor", brickMap.env_color);
+
+	camera = brickMap.camera;
 
 	return true;
 }

@@ -10,6 +10,7 @@
 #include <sstream>
 #include <iostream>
 #include <io.h>
+#include "camera.h"
 #include "ogt_vox.h"
 
 // parse magicavoxel file
@@ -55,15 +56,16 @@ void encodeData(const uint8_t* voxel_data, uint32_t* data_arr, unsigned int size
 	}
 }
 
-class BrickMap
+class Scene
 {
 public:
 	glm::vec3 env_color;
+	Camera camera;
 	unsigned int size_x, size_y, size_z;
 	uint32_t* data = NULL;
 
 	// read brickmap from MagicaVoxel file
-	BrickMap(const char* filePath) {
+	Scene(const char* filePath) {
 		const ogt_vox_scene* scene = readScene(filePath);
 		if (!scene) return;
 
@@ -83,9 +85,18 @@ public:
 		encodeData(model->voxel_data, data, size_x, size_y, size_z);
 
 		env_color = glm::vec3(scene->palette.color[255].r, scene->palette.color[255].g, scene->palette.color[255].b) * scene->materials.matl[255].emit * (float)pow(10, scene->materials.matl[255].flux) / 256.0f;
+
+		ogt_vox_cam voxCam = scene->cameras[0];
+		glm::vec3 angles(voxCam.angle[0], -voxCam.angle[1], voxCam.angle[2]);
+		glm::vec3 camFront(
+			cos(glm::radians(angles.x)) * sin(glm::radians(angles.y)),
+			sin(glm::radians(angles.x)),
+			cos(glm::radians(angles.x)) * cos(glm::radians(angles.y)));
+		glm::vec3 camPos = glm::vec3(voxCam.focus[0]+(float)size_x/2.0f, voxCam.focus[2], voxCam.focus[1] + (float)size_z / 2.0f) - glm::vec3(voxCam.radius)*camFront;
+		camera = Camera(camPos, {{0.0f},{1.0f},{0.0f}}, angles.y, angles.x);
 	}
 	
-	~BrickMap() {
+	~Scene() {
 		delete[] data;
 	}
 };
