@@ -35,7 +35,7 @@ bool firstMouse = true;
 
 // scene
 const char* bricks[3] = { "bricks/block.vox", "bricks/chair.vox", "bricks/light.vox" };
-const char* scenePath = "menger.vox";
+const char* scenePath = "map.vox";
 
 //const char* bricks[8] = {
 //	"bricks/minecraft/white_concrete.vox",
@@ -373,7 +373,7 @@ bool loadScene(Shader shader, const char* brickmapPath, const char* brickNames[]
 
 		for (int j = 1; j < brick.matCount; j++) // load all brick's materials
 		{
-			matsData[(i * 16 + j) * 2 + 0] = brick.mats[j].color >> 8;
+			matsData[(i * 16 + j) * 2 + 0] = brick.mats[j].color | (brick.mats[j].roughness << 24);
 			matsData[(i * 16 + j) * 2 + 1] = brick.mats[j].emission;
 		}
 	}

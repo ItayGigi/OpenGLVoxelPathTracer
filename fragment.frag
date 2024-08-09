@@ -81,7 +81,8 @@ Material GetMaterial(int brickIndex, int matIndex){
 	uvec4 val = texelFetch(MatsTex, ivec2(matIndex, brickIndex), 0);
 	vec3 color = vec3(float((val.r >> 16) & 0xFFu)/255., float((val.r >> 8) & 0xFFu)/255., float((val.r >> 0) & 0xFFu)/255.);
 	float emission = (val.g & 0xFFFFu)/50.;
-	return Material(color, 1., emission);
+	float roughness = float(val.r >> 24)/255.;
+	return Material(color, roughness, emission);
 }
 
 vec4 TestBrick(int brick, vec2 coords){

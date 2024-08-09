@@ -84,7 +84,7 @@ public:
 		data = new uint32_t[size_x*size_y*size_z/8];
 		encodeData(model->voxel_data, data, size_x, size_y, size_z);
 
-		env_color = glm::vec3(scene->palette.color[255].r, scene->palette.color[255].g, scene->palette.color[255].b) * scene->materials.matl[255].emit * (float)pow(10, scene->materials.matl[255].flux) / 256.0f;
+		env_color = glm::vec3(scene->palette.color[255].r, scene->palette.color[255].g, scene->palette.color[255].b) * scene->materials.matl[255].emit * (float)pow(10, scene->materials.matl[255].flux) / 255.0f;
 
 		ogt_vox_cam voxCam = scene->cameras[0];
 		glm::vec3 angles(voxCam.angle[0], -voxCam.angle[1], voxCam.angle[2]);
@@ -105,7 +105,7 @@ struct Material
 {
 	uint32_t color;
 	uint16_t emission;
-	uint16_t roughness;
+	uint8_t roughness;
 
 	Material(){}
 	Material(uint32_t _color, uint16_t _emission, uint16_t _roughness) : color(_color), emission(_emission), roughness(_roughness) {}
@@ -144,12 +144,13 @@ public:
 			if (pallet_to_my_mat[voxel_data[i]] != 0) // already found
 				voxel_data[i] = pallet_to_my_mat[voxel_data[i]];
 			else { // assign new material
-				ogt_vox_rgba color = scene->palette.color[voxel_data[i]];
+				ogt_vox_rgba ogt_color = scene->palette.color[voxel_data[i]];
+				ogt_vox_matl ogt_material = scene->materials.matl[voxel_data[i]];
 
 				mats[matCount] = Material(
-					(unsigned int)(color.r) << 24 | (unsigned int)(color.g) << 16 | (unsigned int)(color.b) << 8 | (unsigned int)(color.a),
-					scene->materials.matl[voxel_data[i]].emit*100.0f*pow(10, scene->materials.matl[voxel_data[i]].flux),
-					0
+					(unsigned int)(ogt_color.r) << 16 | (unsigned int)(ogt_color.g) << 8 | (unsigned int)(ogt_color.b),
+					ogt_material.emit * 100.0f * pow(10, ogt_material.flux),
+					ogt_material.rough * 0xFF
 				);
 
 				pallet_to_my_mat[voxel_data[i]] = matCount;
