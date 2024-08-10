@@ -3,6 +3,7 @@
 layout (location = 0) out vec3 FragColor;
 layout (location = 1) out float FragHistory;
 layout (location = 2) out float FragDepth;
+layout (location = 3) out vec3 FragAlbedo;
 
 in vec2 TexCoord;
 uniform sampler2D LastFrameTex;
@@ -226,6 +227,7 @@ GridHit RaySceneIntersection(Ray ray, vec3 gridPos, float gridScale){
 vec3 Trace(Ray ray){
 	vec3 rayColor = vec3(1.);
 	vec3 incomingLight = vec3(0.);
+	vec3 albedo;
 
 	for (int i=0; i < MAX_BOUNCES; i++){
 		GridHit hitInfo = RaySceneIntersection(ray, vec3(0.), 1.);
@@ -234,7 +236,7 @@ vec3 Trace(Ray ray){
 			return incomingLight + rayColor * EnvironmentColor;
 		}
 
-		rayColor *= hitInfo.mat.color;
+		if (i != 0) rayColor *= hitInfo.mat.color;
 		incomingLight += rayColor * hitInfo.mat.emission;
 
 		ray.origin += ray.dir*hitInfo.dist + hitInfo.normal*EPSILON;
@@ -318,8 +320,11 @@ void main()
 	float posDiff = distance(hitPos, (LastCamPosition + prevDir*texture(DepthTex, prevTexCoord*0.5+0.5).r));
 	if (posDiff > 0.005) FragHistory = 1.;
 
+	if (baseHit.hit) FragAlbedo = baseHit.mat.color;
+	else FragAlbedo = vec3(1.);
+
 	//FragColor = vec3(FragDepth)/10.;
-	FragColor = mix(texture(LastFrameTex, prevTexCoord*0.5+0.5).rgb, color, 1.0/(pow(FragHistory, 0.8)));
+	FragColor = mix(texture(LastFrameTex, prevTexCoord*0.5+0.5).rgb, color, 1.0/(pow(FragHistory, 0.95)));
 
 	return;
 }

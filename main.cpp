@@ -34,8 +34,8 @@ float lastY = windowHeight / 2.0f;
 bool firstMouse = true;
 
 // scene
-const char* bricks[3] = { "bricks/block.vox", "bricks/chair.vox", "bricks/light.vox" };
-const char* scenePath = "map.vox";
+const char* bricks[3] = { "bricks/frame.vox", "bricks/chair.vox", "bricks/light.vox" };
+const char* scenePath = "menger.vox";
 
 //const char* bricks[8] = {
 //	"bricks/minecraft/white_concrete.vox",
@@ -64,6 +64,7 @@ unsigned int fbo1, fbo2;
 unsigned int screenTex1, screenTex2;
 unsigned int historyTex1, historyTex2;
 unsigned int depthTex1, depthTex2;
+unsigned int albedoTex1, albedoTex2;
 
 int main() {
 	// initialize glfw
@@ -143,9 +144,14 @@ int main() {
 
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		postProcessShader.use();
+
 		glActiveTexture(GL_TEXTURE0 + 5);
 		glBindTexture(GL_TEXTURE_2D, screenTex1);
 		glUniform1i(glGetUniformLocation(postProcessShader.ID, "Texture"), 5);
+
+		glActiveTexture(GL_TEXTURE0 + 8);
+		glBindTexture(GL_TEXTURE_2D, albedoTex1);
+		glUniform1i(glGetUniformLocation(postProcessShader.ID, "AlbedoTex"), 8);
 		
 		glBindVertexArray(VAO);
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
@@ -154,6 +160,7 @@ int main() {
 		std::swap(screenTex1, screenTex2);
 		std::swap(historyTex1, historyTex2);
 		std::swap(depthTex1, depthTex2);
+		std::swap(albedoTex1, albedoTex2);
 
 		glfwPollEvents();
 		glfwSwapBuffers(window);
@@ -168,6 +175,8 @@ int main() {
 	glDeleteTextures(1, &historyTex2);
 	glDeleteTextures(1, &depthTex1);
 	glDeleteTextures(1, &depthTex2);
+	glDeleteTextures(1, &albedoTex1);
+	glDeleteTextures(1, &albedoTex2);
 
 	glfwTerminate();
 	return 0;
@@ -181,7 +190,7 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 
 	glBindFramebuffer(GL_FRAMEBUFFER, fbo1);
 
-	unsigned int attachments[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2};
+	unsigned int attachments[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3};
 
 	// generate texture
 	glGenTextures(1, &screenTex1);
@@ -223,10 +232,24 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 	// attach it to currently bound framebuffer object
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, depthTex1, 0);
 
+	// generate texture
+	glGenTextures(1, &albedoTex1);
+	glActiveTexture(GL_TEXTURE0 + 8);
+	glBindTexture(GL_TEXTURE_2D, albedoTex1);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, windowWidth, windowHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+	// attach it to currently bound framebuffer object
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, GL_TEXTURE_2D, albedoTex1, 0);
+
 	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
 		std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
 
-	glDrawBuffers(3, attachments);
+	glDrawBuffers(4, attachments);
 
 	glBindFramebuffer(GL_FRAMEBUFFER, fbo2);
 
@@ -270,10 +293,24 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 	// attach it to currently bound framebuffer object
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, depthTex2, 0);
 
+	// generate texture
+	glGenTextures(1, &albedoTex2);
+	glActiveTexture(GL_TEXTURE0 + 8);
+	glBindTexture(GL_TEXTURE_2D, albedoTex2);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, windowWidth, windowHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+	// attach it to currently bound framebuffer object
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, GL_TEXTURE_2D, albedoTex2, 0);
+
 	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
 		std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
 
-	glDrawBuffers(3, attachments);
+	glDrawBuffers(4, attachments);
 
 	glBindBuffer(GL_FRAMEBUFFER, 0);
 }
