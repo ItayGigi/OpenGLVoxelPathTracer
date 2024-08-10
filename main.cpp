@@ -10,13 +10,14 @@
 
 #include <queue>
 
-#define VSYNC true
+#define VSYNC false
 
 const enum BufferTexture {
 	ScreenTexture = 0,
 	HistoryTexture,
 	DepthTexture,
 	AlbedoTexture,
+	NormalTexture,
 };
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
@@ -68,7 +69,7 @@ int fpsAverageAmount = 150;
 
 // frame buffers
 unsigned int fbo1, fbo2;
-unsigned int bufferTextures1[4], bufferTextures2[4];
+unsigned int bufferTextures1[5], bufferTextures2[5];
 
 int main() {
 	// initialize glfw
@@ -134,7 +135,8 @@ int main() {
 
 		shader.setTexture("LastFrameTex", bufferTextures2[ScreenTexture], 5 + ScreenTexture);
 		shader.setTexture("HistoryTex", bufferTextures2[HistoryTexture], 5 + HistoryTexture);
-		shader.setTexture("DepthTex", bufferTextures2[DepthTexture], 5 + DepthTexture);
+		shader.setTexture("LastDepthTex", bufferTextures2[DepthTexture], 5 + DepthTexture);
+		shader.setTexture("LastNormalTex", bufferTextures2[NormalTexture], 5 + NormalTexture);
 
 		draw(shader, VAO);
 
@@ -172,7 +174,7 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 	windowWidth = width;
 	windowHeight = height;
 
-	unsigned int attachments[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3};
+	unsigned int attachments[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3, GL_COLOR_ATTACHMENT4};
 
 	for (int i = 0; i < 2; i++)
 	{
@@ -208,10 +210,14 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 		glBindTexture(GL_TEXTURE_2D, bufferTextures1[AlbedoTexture]);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, windowWidth, windowHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
 
+		glActiveTexture(GL_TEXTURE0 + 5 + NormalTexture);
+		glBindTexture(GL_TEXTURE_2D, bufferTextures1[NormalTexture]);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8I, windowWidth, windowHeight, 0, GL_RGB_INTEGER, GL_INT, NULL);
+
 		if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
 			std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
 
-		glDrawBuffers(4, attachments);
+		glDrawBuffers(sizeof(attachments)/sizeof(unsigned int), attachments);
 
 		std::swap(fbo1, fbo2);
 		std::swap(bufferTextures1, bufferTextures2);

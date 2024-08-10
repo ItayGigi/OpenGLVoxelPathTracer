@@ -4,11 +4,13 @@ layout (location = 0) out vec3 FragColor;
 layout (location = 1) out float FragHistory;
 layout (location = 2) out float FragDepth;
 layout (location = 3) out vec3 FragAlbedo;
+layout (location = 4) out ivec3 FragNormal;
 
 in vec2 TexCoord;
 uniform sampler2D LastFrameTex;
 uniform sampler2D HistoryTex;
-uniform sampler2D DepthTex;
+uniform sampler2D LastDepthTex;
+uniform isampler2D LastNormalTex;
 
 uniform uvec2 Resolution;
 uniform uint FrameCount;
@@ -310,21 +312,18 @@ void main()
 	vec3 prevLocalNearPlane = (transpose(LastCamRotation) * vec4(prevDir, 0.)).xyz;
 	vec2 prevTexCoord = (prevLocalNearPlane.xy/prevLocalNearPlane.z*1.5)/vec2(aspect, 1.);
 
-	//FragColor = mix(texture(LastFrameTex, TexCoord*0.5+0.5).rgb, color, 1.0/(AccumulatedFramesCount+1u));
-
 	if (LastCamPosition == CamPosition) baseHit.mat.roughness = 1.;
 
-	FragHistory = texture(HistoryTex, prevTexCoord*0.5+0.5).r * pow(baseHit.mat.roughness, 0.05) + 1.;
+	FragHistory = texture(HistoryTex, prevTexCoord*0.5+0.5).r * pow(baseHit.mat.roughness, 0.15) + 1.;
 	FragDepth = baseHit.dist;
+	FragNormal = baseHit.normal;
 
-	float posDiff = distance(hitPos, (LastCamPosition + prevDir*texture(DepthTex, prevTexCoord*0.5+0.5).r));
-	if (posDiff > 0.005) FragHistory = 1.;
+	float posDiff = distance(hitPos, (LastCamPosition + prevDir*texture(LastDepthTex, prevTexCoord*0.5+0.5).r));
+	if (posDiff > 0.005 || FragNormal != texture(LastNormalTex, prevTexCoord*0.5+0.5).rgb) FragHistory = 1.;
 
 	if (baseHit.hit) FragAlbedo = baseHit.mat.color;
 	else FragAlbedo = vec3(1.);
 
-	//FragColor = vec3(FragDepth)/10.;
 	FragColor = mix(texture(LastFrameTex, prevTexCoord*0.5+0.5).rgb, color, 1.0/(pow(FragHistory, 0.95)));
-
 	return;
 }
