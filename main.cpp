@@ -35,7 +35,7 @@ bool firstMouse = true;
 
 // scene
 const char* bricks[3] = { "bricks/block.vox", "bricks/chair.vox", "bricks/light.vox" };
-const char* scenePath = "menger.vox";
+const char* scenePath = "map.vox";
 
 //const char* bricks[8] = {
 //	"bricks/minecraft/white_concrete.vox",
@@ -63,6 +63,7 @@ int fpsAverageAmount = 150;
 unsigned int fbo1, fbo2;
 unsigned int screenTex1, screenTex2;
 unsigned int historyTex1, historyTex2;
+unsigned int depthTex1, depthTex2;
 
 int main() {
 	// initialize glfw
@@ -134,6 +135,10 @@ int main() {
 		glBindTexture(GL_TEXTURE_2D, historyTex2);
 		glUniform1i(glGetUniformLocation(shader.ID, "HistoryTex"), 6);
 
+		glActiveTexture(GL_TEXTURE0 + 7);
+		glBindTexture(GL_TEXTURE_2D, depthTex2);
+		glUniform1i(glGetUniformLocation(shader.ID, "DepthTex"), 7);
+
 		draw(shader, VAO);
 
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -148,6 +153,7 @@ int main() {
 		std::swap(fbo1, fbo2);
 		std::swap(screenTex1, screenTex2);
 		std::swap(historyTex1, historyTex2);
+		std::swap(depthTex1, depthTex2);
 
 		glfwPollEvents();
 		glfwSwapBuffers(window);
@@ -158,6 +164,10 @@ int main() {
 	glDeleteTextures(1, &matsTex);
 	glDeleteTextures(1, &screenTex1);
 	glDeleteTextures(1, &screenTex2);
+	glDeleteTextures(1, &historyTex1);
+	glDeleteTextures(1, &historyTex2);
+	glDeleteTextures(1, &depthTex1);
+	glDeleteTextures(1, &depthTex2);
 
 	glfwTerminate();
 	return 0;
@@ -171,7 +181,7 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 
 	glBindFramebuffer(GL_FRAMEBUFFER, fbo1);
 
-	unsigned int attachments[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 };
+	unsigned int attachments[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2};
 
 	// generate texture
 	glGenTextures(1, &screenTex1);
@@ -185,14 +195,11 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 	// attach it to currently bound framebuffer object
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, screenTex1, 0);
 
-	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-		std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
-
 	// generate texture
 	glGenTextures(1, &historyTex1);
 	glActiveTexture(GL_TEXTURE0 + 6);
 	glBindTexture(GL_TEXTURE_2D, historyTex1);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_R32UI, windowWidth, windowHeight, 0, GL_RED_INTEGER, GL_UNSIGNED_INT, NULL);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, windowWidth, windowHeight, 0, GL_RED, GL_FLOAT, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
@@ -202,10 +209,24 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 	// attach it to currently bound framebuffer object
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, historyTex1, 0);
 
+	// generate texture
+	glGenTextures(1, &depthTex1);
+	glActiveTexture(GL_TEXTURE0 + 7);
+	glBindTexture(GL_TEXTURE_2D, depthTex1);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, windowWidth, windowHeight, 0, GL_RED, GL_FLOAT, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+	// attach it to currently bound framebuffer object
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, depthTex1, 0);
+
 	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
 		std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
 
-	glDrawBuffers(2, attachments);
+	glDrawBuffers(3, attachments);
 
 	glBindFramebuffer(GL_FRAMEBUFFER, fbo2);
 
@@ -221,14 +242,11 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 	// attach it to currently bound framebuffer object
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, screenTex2, 0);
 
-	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-		std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
-
 	// generate texture
 	glGenTextures(1, &historyTex2);
 	glActiveTexture(GL_TEXTURE0 + 6);
 	glBindTexture(GL_TEXTURE_2D, historyTex2);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_R32UI, windowWidth, windowHeight, 0, GL_RED_INTEGER, GL_UNSIGNED_INT, NULL);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, windowWidth, windowHeight, 0, GL_RED, GL_FLOAT, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
@@ -238,10 +256,24 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 	// attach it to currently bound framebuffer object
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, historyTex2, 0);
 
+	// generate texture
+	glGenTextures(1, &depthTex2);
+	glActiveTexture(GL_TEXTURE0 + 7);
+	glBindTexture(GL_TEXTURE_2D, depthTex2);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, windowWidth, windowHeight, 0, GL_RED, GL_FLOAT, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+	// attach it to currently bound framebuffer object
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, depthTex2, 0);
+
 	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
 		std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
 
-	glDrawBuffers(2, attachments);
+	glDrawBuffers(3, attachments);
 
 	glBindBuffer(GL_FRAMEBUFFER, 0);
 }
@@ -365,7 +397,7 @@ void draw(Shader shader, unsigned int VAO) {
 	shader.setVec3("CamPosition", camera.Position);
 
 	shader.setMat4("LastCamRotation", glm::mat4_cast(lastCamera.GetRotation()));
-	shader.setVec3("LastCamPosition", camera.Position);
+	shader.setVec3("LastCamPosition", lastCamera.Position);
 
 	shader.setUVec2("Resolution", windowWidth, windowHeight);
 

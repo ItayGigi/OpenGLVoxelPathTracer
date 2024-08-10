@@ -17,8 +17,8 @@ vec3 ACES(const vec3 x) {
 void main()
 {
 	vec3 color = texture(Texture, TexCoord*0.5+0.5).rgb;
-	color = ACES(color); //tonemapping
-	color = pow(color, vec3(1.0/2.2)); //color correction
+	color = ACES(color); // tonemapping
+	color = pow(color, vec3(1.0/2.2)); // gamma correction
 	FragColor = color;
 	
 	//FragColor = texture(Texture, TexCoord*0.5+0.5).rgb;;

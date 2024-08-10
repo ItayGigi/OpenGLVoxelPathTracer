@@ -1,11 +1,13 @@
 #version 330 core
 
 layout (location = 0) out vec3 FragColor;
-layout (location = 1) out uint FragHistory;
+layout (location = 1) out float FragHistory;
+layout (location = 2) out float FragDepth;
 
 in vec2 TexCoord;
 uniform sampler2D LastFrameTex;
-uniform usampler2D HistoryTex;
+uniform sampler2D HistoryTex;
+uniform sampler2D DepthTex;
 
 uniform uvec2 Resolution;
 uniform uint FrameCount;
@@ -285,11 +287,9 @@ void main()
 	vec3 sumColor = vec3(0.);
 	vec3 localNearPlane = vec3(TexCoord.x*aspect, TexCoord.y, 1.5);
 
-	vec3 prevLocalNearPlane = (transpose(LastCamRotation) * (CamRotation * vec4(localNearPlane, 0.))).xyz;
-	vec2 prevTexCoord = (prevLocalNearPlane.xy/prevLocalNearPlane.z*1.5)/vec2(aspect, 1.);
-
 	for (int s = 0; s < SAMPLES; s++) {
-		vec3 dir = normalize((CamRotation * vec4(localNearPlane + vec3(2.*rand2()-1., 0.)/Resolution.y, 0.)).xyz);
+		vec3 offset =  vec3(2.*rand2()-1., 0.)/Resolution.y; // for anti aliasing
+		vec3 dir = normalize((CamRotation * vec4(localNearPlane /*+ offset*/, 0.)).xyz);
 
 		Ray ray = Ray(CamPosition, dir, 1.0/dir);
 
@@ -298,9 +298,28 @@ void main()
 
 	vec3 color = sumColor/SAMPLES;
 
+	// spatiotemporal denoisification
+	vec3 baseDir = normalize((CamRotation * vec4(localNearPlane, 0.)).xyz);
+
+	GridHit baseHit = RaySceneIntersection(Ray(CamPosition, baseDir, 1.0/baseDir), vec3(0.), 1.);
+	vec3 hitPos = CamPosition + baseHit.dist * baseDir;
+	vec3 prevDir = normalize(hitPos - LastCamPosition);
+
+	vec3 prevLocalNearPlane = (transpose(LastCamRotation) * vec4(prevDir, 0.)).xyz;
+	vec2 prevTexCoord = (prevLocalNearPlane.xy/prevLocalNearPlane.z*1.5)/vec2(aspect, 1.);
+
 	//FragColor = mix(texture(LastFrameTex, TexCoord*0.5+0.5).rgb, color, 1.0/(AccumulatedFramesCount+1u));
-	FragHistory = texture(HistoryTex, prevTexCoord*0.5+0.5).r + 1u;
-	FragColor = mix(texture(LastFrameTex, prevTexCoord*0.5+0.5).rgb, color, 1.0/(pow(float(FragHistory), 0.8)));
+
+	if (LastCamPosition == CamPosition) baseHit.mat.roughness = 1.;
+
+	FragHistory = texture(HistoryTex, prevTexCoord*0.5+0.5).r * pow(baseHit.mat.roughness, 0.05) + 1.;
+	FragDepth = baseHit.dist;
+
+	float posDiff = distance(hitPos, (LastCamPosition + prevDir*texture(DepthTex, prevTexCoord*0.5+0.5).r));
+	if (posDiff > 0.005) FragHistory = 1.;
+
+	//FragColor = vec3(FragDepth)/10.;
+	FragColor = mix(texture(LastFrameTex, prevTexCoord*0.5+0.5).rgb, color, 1.0/(pow(FragHistory, 0.8)));
 
 	return;
 }
