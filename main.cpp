@@ -62,6 +62,7 @@ int fpsAverageAmount = 150;
 // frame buffers
 unsigned int fbo1, fbo2;
 unsigned int screenTex1, screenTex2;
+unsigned int historyTex1, historyTex2;
 
 int main() {
 	// initialize glfw
@@ -123,10 +124,15 @@ int main() {
 		glBindFramebuffer(GL_FRAMEBUFFER, fbo1);
 		glClear(GL_COLOR_BUFFER_BIT);
 
+		shader.use();
+
 		glActiveTexture(GL_TEXTURE0 + 5);
 		glBindTexture(GL_TEXTURE_2D, screenTex2);
-		shader.use();
 		glUniform1i(glGetUniformLocation(shader.ID, "LastFrameTex"), 5);
+
+		glActiveTexture(GL_TEXTURE0 + 6);
+		glBindTexture(GL_TEXTURE_2D, historyTex2);
+		glUniform1i(glGetUniformLocation(shader.ID, "HistoryTex"), 6);
 
 		draw(shader, VAO);
 
@@ -141,6 +147,7 @@ int main() {
 
 		std::swap(fbo1, fbo2);
 		std::swap(screenTex1, screenTex2);
+		std::swap(historyTex1, historyTex2);
 
 		glfwPollEvents();
 		glfwSwapBuffers(window);
@@ -164,13 +171,15 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 
 	glBindFramebuffer(GL_FRAMEBUFFER, fbo1);
 
+	unsigned int attachments[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 };
+
 	// generate texture
 	glGenTextures(1, &screenTex1);
 	glActiveTexture(GL_TEXTURE0 + 5);
 	glBindTexture(GL_TEXTURE_2D, screenTex1);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, windowWidth, windowHeight, 0, GL_RGB, GL_FLOAT, NULL);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glBindTexture(GL_TEXTURE_2D, 0);
 
 	// attach it to currently bound framebuffer object
@@ -179,6 +188,25 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
 		std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
 
+	// generate texture
+	glGenTextures(1, &historyTex1);
+	glActiveTexture(GL_TEXTURE0 + 6);
+	glBindTexture(GL_TEXTURE_2D, historyTex1);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_R32UI, windowWidth, windowHeight, 0, GL_RED_INTEGER, GL_UNSIGNED_INT, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+	// attach it to currently bound framebuffer object
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, historyTex1, 0);
+
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+		std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
+
+	glDrawBuffers(2, attachments);
+
 	glBindFramebuffer(GL_FRAMEBUFFER, fbo2);
 
 	// generate texture
@@ -186,8 +214,8 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 	glActiveTexture(GL_TEXTURE0 + 5);
 	glBindTexture(GL_TEXTURE_2D, screenTex2);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, windowWidth, windowHeight, 0, GL_RGB, GL_FLOAT, NULL);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glBindTexture(GL_TEXTURE_2D, 0);
 
 	// attach it to currently bound framebuffer object
@@ -195,6 +223,25 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 
 	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
 		std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
+
+	// generate texture
+	glGenTextures(1, &historyTex2);
+	glActiveTexture(GL_TEXTURE0 + 6);
+	glBindTexture(GL_TEXTURE_2D, historyTex2);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_R32UI, windowWidth, windowHeight, 0, GL_RED_INTEGER, GL_UNSIGNED_INT, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+	// attach it to currently bound framebuffer object
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, historyTex2, 0);
+
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+		std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
+
+	glDrawBuffers(2, attachments);
 
 	glBindBuffer(GL_FRAMEBUFFER, 0);
 }
@@ -345,8 +392,8 @@ bool loadScene(Shader shader, const char* brickmapPath, const char* brickNames[]
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_R32UI, brickMap.size_x*brickMap.size_y/8, brickMap.size_z, 0, GL_RED_INTEGER, GL_UNSIGNED_INT, brickMap.data);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
 	glUniform1i(glGetUniformLocation(shader.ID, "BrickMap"), 0);
 	
