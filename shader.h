@@ -147,6 +147,11 @@ public:
     {
         glUniformMatrix4fv(glGetUniformLocation(ID, name.c_str()), 1, GL_FALSE, &mat[0][0]);
     }
+    void setTexture(const std::string& name, const unsigned int texture, const unsigned int slot) {
+        glActiveTexture(GL_TEXTURE0 + slot);
+        glBindTexture(GL_TEXTURE_2D, texture);
+        glUniform1i(glGetUniformLocation(ID, name.c_str()), slot);
+    }
 
 private:
     // utility function for checking shader compilation/linking errors.
