@@ -42,7 +42,7 @@ float lastY = windowHeight / 2.0f;
 bool firstMouse = true;
 
 // scene
-const char* bricks[3] = { "bricks/block.vox", "bricks/chair.vox", "bricks/light.vox" };
+const char* bricks[3] = { "bricks/frame.vox", "bricks/chair.vox", "bricks/light.vox" };
 const char* scenePath = "menger.vox";
 
 //const char* bricks[8] = {

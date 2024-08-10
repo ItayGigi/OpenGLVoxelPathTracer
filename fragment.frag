@@ -175,7 +175,7 @@ GridHit RayBrickIntersection(Ray ray, int brickIndex, vec3 gridPos, float gridSc
 	return noHit;
 }
 
-GridHit RaySceneIntersection(Ray ray, vec3 gridPos, float gridScale){
+GridHit RaySceneIntersection(Ray ray, vec3 gridPos, float gridScale, int limit){
 	GridHit noHit = GridHit(false, -1., ivec3(-1), Material(vec3(0.), 0., 0.), 0);
 
 	SlabIntersection boundHit = RaySlabIntersection(ray, gridPos, gridPos + MapSize*gridScale);
@@ -201,7 +201,7 @@ GridHit RaySceneIntersection(Ray ray, vec3 gridPos, float gridScale){
 	bvec3 mask;
 
 	int iter = 0, brickIter = 0;
-	while(last_voxel != curr_voxel && iter++ < int(MapSize.x + MapSize.y + MapSize.z)) {
+	while(last_voxel != curr_voxel && iter++ < limit) {
 		uint cell = GetBrickMapCell(curr_voxel);
 		if (cell != 0u){
 			GridHit hit = RayBrickIntersection(ray, int(cell), gridPos + curr_voxel*gridScale, gridScale);
@@ -223,6 +223,7 @@ GridHit RaySceneIntersection(Ray ray, vec3 gridPos, float gridScale){
 	}
 	
 	noHit.additional = iter + brickIter;
+	if (iter == limit+1) noHit.dist = 0.;
 	return noHit;
 }
 
@@ -231,11 +232,14 @@ vec3 Trace(Ray ray){
 	vec3 incomingLight = vec3(0.);
 	vec3 albedo;
 
+	int limit = int(MapSize.x + MapSize.y + MapSize.z);
 	for (int i=0; i < MAX_BOUNCES; i++){
-		GridHit hitInfo = RaySceneIntersection(ray, vec3(0.), 1.);
+		GridHit hitInfo = RaySceneIntersection(ray, vec3(0.), 1., limit);
 
 		if (!hitInfo.hit){
-			return incomingLight + rayColor * EnvironmentColor;
+			if (hitInfo.dist < 0.)
+				return incomingLight + rayColor * EnvironmentColor;
+			return vec3(0.);
 		}
 
 		if (i != 0) rayColor *= hitInfo.mat.color;
@@ -249,6 +253,8 @@ vec3 Trace(Ray ray){
 
 		ray.dir = normalize(mix(specularDir, diffuseDir, hitInfo.mat.roughness));
 		ray.inverse_dir = 1.0/ray.dir;
+
+		limit = int(pow(limit, max(0.87, 1./(i+1))));
 	}
 
 	return incomingLight;
@@ -305,7 +311,7 @@ void main()
 	// spatiotemporal denoisification
 	vec3 baseDir = normalize((CamRotation * vec4(localNearPlane, 0.)).xyz);
 
-	GridHit baseHit = RaySceneIntersection(Ray(CamPosition, baseDir, 1.0/baseDir), vec3(0.), 1.);
+	GridHit baseHit = RaySceneIntersection(Ray(CamPosition, baseDir, 1.0/baseDir), vec3(0.), 1., int(MapSize.x + MapSize.y + MapSize.z));
 	vec3 hitPos = CamPosition + baseHit.dist * baseDir;
 	vec3 prevDir = normalize(hitPos - LastCamPosition);
 
