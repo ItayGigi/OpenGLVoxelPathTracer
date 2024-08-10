@@ -22,12 +22,12 @@ bool loadScene(Shader shader, const char* brickmapPath, const char* brickNames[]
 void updateFPS(GLFWwindow* window);
 
 // window
+GLFWwindow* window;
 int windowWidth = 1000, windowHeight = 700;
 
 // camera
 Camera camera;
-glm::vec3 lastCamPos(0.0f, 0.0f, 0.0f);
-glm::vec3 lastCamFront(0.0f, 0.0f, 0.0f);
+Camera lastCamera;
 
 float lastX = windowWidth / 2.0f;
 float lastY = windowHeight / 2.0f;
@@ -35,7 +35,7 @@ bool firstMouse = true;
 
 // scene
 const char* bricks[3] = { "bricks/block.vox", "bricks/chair.vox", "bricks/light.vox" };
-const char* scenePath = "map.vox";
+const char* scenePath = "menger.vox";
 
 //const char* bricks[8] = {
 //	"bricks/minecraft/white_concrete.vox",
@@ -71,7 +71,7 @@ int main() {
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 	// create window
-	GLFWwindow* window = glfwCreateWindow(windowWidth, windowHeight, "My Window", NULL, NULL);
+	window = glfwCreateWindow(windowWidth, windowHeight, "My Window", NULL, NULL);
 	if (window == NULL)
 	{
 		std::cout << "Failed to create GLFW window" << std::endl;
@@ -118,21 +118,7 @@ int main() {
 	// render loop
 	while (!glfwWindowShouldClose(window))
 	{
-		frameCount++;
-		framesSinceLastMoved++;
-		float currentFrameTime = static_cast<float>(glfwGetTime());
-		deltaTime = currentFrameTime - lastFrameTime;
-		lastFrameTime = currentFrameTime;
-
-		updateFPS(window);
-
 		processInput(window);
-
-		if (camera.Position != lastCamPos || camera.Front != lastCamFront) {
-			lastCamPos = camera.Position;
-			lastCamFront = camera.Front;
-			framesSinceLastMoved = 0;
-		}
 
 		glBindFramebuffer(GL_FRAMEBUFFER, fbo1);
 		glClear(GL_COLOR_BUFFER_BIT);
@@ -314,10 +300,25 @@ unsigned int createVAO() {
 }
 
 void draw(Shader shader, unsigned int VAO) {
+	frameCount++;
+	framesSinceLastMoved++;
+	float currentFrameTime = static_cast<float>(glfwGetTime());
+	deltaTime = currentFrameTime - lastFrameTime;
+	lastFrameTime = currentFrameTime;
+
+	updateFPS(window);
+
+	if (camera.Position != lastCamera.Position || camera.Front != lastCamera.Front) {
+		framesSinceLastMoved = 0;
+	}
+
 	shader.use();
 
 	shader.setMat4("CamRotation", glm::mat4_cast(camera.GetRotation()));
 	shader.setVec3("CamPosition", camera.Position);
+
+	shader.setMat4("LastCamRotation", glm::mat4_cast(lastCamera.GetRotation()));
+	shader.setVec3("LastCamPosition", camera.Position);
 
 	shader.setUVec2("Resolution", windowWidth, windowHeight);
 
@@ -326,6 +327,8 @@ void draw(Shader shader, unsigned int VAO) {
 
 	glBindVertexArray(VAO);
 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
+	lastCamera = camera;
 }
 
 bool loadScene(Shader shader, const char* brickmapPath, const char* brickNames[], const unsigned int brickCount, unsigned int* mapTexture, unsigned int* bricksTexture, unsigned int* matsTexture) {

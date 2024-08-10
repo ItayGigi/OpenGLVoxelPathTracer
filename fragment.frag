@@ -14,6 +14,9 @@ uniform uvec3 MapSize;
 uniform mat4 CamRotation;
 uniform vec3 CamPosition;
 
+uniform mat4 LastCamRotation;
+uniform vec3 LastCamPosition;
+
 uniform usampler2D BrickMap;
 
 uniform usampler2DArray BricksTex;
@@ -24,6 +27,7 @@ uniform vec3 EnvironmentColor;
 #define BRICK_RES 8
 #define EPSILON 0.00001
 #define SAMPLES 1.
+#define MAX_BOUNCES 6
 
 uint ns;
 //#define INIT_RNG ns = uint(frame)*uint(Resolution.x*Resolution.y)+uint(TexCoord.x+TexCoord.y*Resolution.x)
@@ -219,11 +223,10 @@ vec3 Trace(Ray ray){
 	vec3 rayColor = vec3(1.);
 	vec3 incomingLight = vec3(0.);
 
-	for (int i=0; i < 6; i++){
+	for (int i=0; i < MAX_BOUNCES; i++){
 		GridHit hitInfo = RaySceneIntersection(ray, vec3(0.), 1.);
 
 		if (!hitInfo.hit){
-			//vec3 skyColor = vec3(0.0);
 			return incomingLight + rayColor * EnvironmentColor;
 		}
 
@@ -243,15 +246,6 @@ vec3 Trace(Ray ray){
 	}
 
 	return incomingLight;
-}
-
-vec3 ACES(const vec3 x) {
-	const float a = 2.51;
-	const float b = 0.03;
-	const float c = 2.43;
-	const float d = 0.59;
-	const float e = 0.14;
-	return (x * (a * x + b)) / (x * (c * x + d) + e);
 }
 
 float RaySphereIntersection(Ray ray, vec3 pos, float radius) {
@@ -290,7 +284,9 @@ void main()
 
 	vec3 sumColor = vec3(0.);
 	for (int s = 0; s < SAMPLES; s++) {
-		vec3 dir = normalize((CamRotation * vec4(TexCoord.x*aspect + (2.*rand()-1.)/Resolution.y, TexCoord.y + (2.*rand()-1.)/Resolution.y, 1.5, 1.)).xyz);
+		vec3 localNearPlane = vec3(TexCoord.x*aspect, TexCoord.y, 1.5) + vec3(2.*rand2()-1., 0.)/Resolution.y;
+		vec3 dir = normalize((CamRotation * vec4(localNearPlane, 1.)).xyz);
+
 		Ray ray = Ray(CamPosition, dir, 1.0/dir);
 
 		sumColor += Trace(ray);
