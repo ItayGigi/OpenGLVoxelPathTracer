@@ -43,8 +43,11 @@ float lastY = windowHeight / 2.0f;
 bool firstMouse = true;
 
 // scene
-const char* bricks[3] = { "bricks/frame.vox", "bricks/chair.vox", "bricks/light.vox" };
+const char* brickPaths[3] = { "bricks/frame.vox", "bricks/chair.vox", "bricks/light.vox" };
 const char* scenePath = "menger.vox";
+
+std::unique_ptr<BrickMap> brickMap;
+std::vector<std::unique_ptr<Brick>> bricks;
 
 //const char* bricks[8] = {
 //	"bricks/minecraft/white_concrete.vox",
@@ -110,7 +113,7 @@ int main() {
 
 	// load scene
 	unsigned int sceneTex, bricksTex, matsTex;
-	if (!loadScene(shader, scenePath, bricks, sizeof(bricks) / sizeof(char*), &sceneTex, &bricksTex, &matsTex)) {
+	if (!loadScene(shader, scenePath, brickPaths, sizeof(brickPaths) / sizeof(char*), &sceneTex, &bricksTex, &matsTex)) {
 		std::cerr << "failed to load scene. exiting" << std::endl;
 		glDeleteTextures(1, &sceneTex);
 		glDeleteTextures(1, &bricksTex);
@@ -370,16 +373,16 @@ void draw(Shader shader, Shader postShader, unsigned int VAO) {
 
 bool loadScene(Shader shader, const char* brickmapPath, const char* brickNames[], const unsigned int brickCount, unsigned int* mapTexture, unsigned int* bricksTexture, unsigned int* matsTexture) {
 	// map
-	Scene brickMap((std::string("assets/") + brickmapPath).c_str());
-	if (!brickMap.data) return false; // failed to load brickmap
+	brickMap = std::unique_ptr<BrickMap>(new BrickMap((std::string("assets/") + brickmapPath).c_str()));
+	if (!brickMap->data) return false; // failed to load brickmap
 
 	shader.use();
-	shader.setUVec3("MapSize", brickMap.size_x, brickMap.size_y, brickMap.size_z);
+	shader.setUVec3("MapSize", brickMap->size_x, brickMap->size_y, brickMap->size_z);
 
 	glGenTextures(1, mapTexture);
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, *matsTexture);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_R32UI, brickMap.size_x*brickMap.size_y/8, brickMap.size_z, 0, GL_RED_INTEGER, GL_UNSIGNED_INT, brickMap.data);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_R32UI, brickMap->size_x*brickMap->size_y/8, brickMap->size_z, 0, GL_RED_INTEGER, GL_UNSIGNED_INT, brickMap->data);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -404,17 +407,19 @@ bool loadScene(Shader shader, const char* brickmapPath, const char* brickNames[]
 
 	for (int i = 0; i < brickCount; i++)
 	{
-		Brick brick((std::string("assets/") + brickNames[i]).c_str());
+		bricks.push_back(std::unique_ptr<Brick>(new Brick((std::string("assets/") + brickNames[i]).c_str())));
 
-		if (!brick.data) return false; // failed to load brick
+		Brick* brick = bricks.front().get();
+
+		if (!brick->data) return false; // failed to load brick
 
 		// assign brick data
-		glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, i, BRICK_SIZE, BRICK_SIZE * BRICK_SIZE / 8, 1, GL_RED_INTEGER, GL_UNSIGNED_INT, brick.data);
+		glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, i, BRICK_SIZE, BRICK_SIZE * BRICK_SIZE / 8, 1, GL_RED_INTEGER, GL_UNSIGNED_INT, brick->data);
 
-		for (int j = 1; j < brick.matCount; j++) // load all brick's materials
+		for (int j = 1; j < brick->matCount; j++) // load all brick's materials
 		{
-			matsData[(i * 16 + j) * 2 + 0] = brick.mats[j].color | (brick.mats[j].roughness << 24);
-			matsData[(i * 16 + j) * 2 + 1] = brick.mats[j].emission;
+			matsData[(i * 16 + j) * 2 + 0] = brick->mats[j].color | (brick->mats[j].roughness << 24);
+			matsData[(i * 16 + j) * 2 + 1] = brick->mats[j].emission;
 		}
 	}
 
@@ -434,9 +439,9 @@ bool loadScene(Shader shader, const char* brickmapPath, const char* brickNames[]
 
 	delete[] matsData;
 
-	shader.setVec3("EnvironmentColor", brickMap.env_color);
+	shader.setVec3("EnvironmentColor", brickMap->env_color);
 
-	camera = brickMap.camera;
+	camera = brickMap->camera;
 
 	return true;
 }

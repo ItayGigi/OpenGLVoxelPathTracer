@@ -56,7 +56,7 @@ void encodeData(const uint8_t* voxel_data, uint32_t* data_arr, unsigned int size
 	}
 }
 
-class Scene
+class BrickMap
 {
 public:
 	glm::vec3 env_color;
@@ -64,8 +64,10 @@ public:
 	unsigned int size_x, size_y, size_z;
 	uint32_t* data = NULL;
 
+	BrickMap() {}
+
 	// read brickmap from MagicaVoxel file
-	Scene(const char* filePath) {
+	BrickMap(const char* filePath) {
 		const ogt_vox_scene* scene = readScene(filePath);
 		if (!scene) return;
 
@@ -96,7 +98,7 @@ public:
 		camera = Camera(camPos, {{0.0f},{1.0f},{0.0f}}, angles.y, angles.x);
 	}
 	
-	~Scene() {
+	~BrickMap() {
 		delete[] data;
 	}
 };
@@ -117,6 +119,8 @@ public:
 	uint32_t* data = NULL;
 	Material mats[16];
 	int matCount = 1;
+
+	Brick(){}
 
 	// read brick from MagicaVoxel file
 	Brick(const char* filePath) {
