@@ -5,6 +5,7 @@ layout (location = 1) out float FragHistory;
 layout (location = 2) out float FragDepth;
 layout (location = 3) out vec3 FragAlbedo;
 layout (location = 4) out ivec3 FragNormal;
+layout (location = 5) out float FragEmission;
 
 in vec2 TexCoord;
 uniform sampler2D LastFrameTex;
@@ -242,8 +243,10 @@ vec3 Trace(Ray ray){
 			return vec3(0.);
 		}
 
-		if (i != 0) rayColor *= hitInfo.mat.color;
-		incomingLight += rayColor * hitInfo.mat.emission;
+		if (i != 0) {
+			rayColor *= hitInfo.mat.color;
+			incomingLight += rayColor * hitInfo.mat.emission;
+		}
 
 		ray.origin += ray.dir*hitInfo.dist + hitInfo.normal*EPSILON;
 		
@@ -325,10 +328,12 @@ void main()
 	FragNormal = baseHit.normal;
 
 	float posDiff = distance(hitPos, (LastCamPosition + prevDir*texture(LastDepthTex, prevTexCoord*0.5+0.5).r));
-	if (posDiff > 0.005 || FragNormal != texture(LastNormalTex, prevTexCoord*0.5+0.5).rgb) FragHistory = 1.;
+	if (posDiff > 0.001 || FragNormal != texture(LastNormalTex, prevTexCoord*0.5+0.5).rgb) FragHistory = 1.;
 
 	if (baseHit.hit) FragAlbedo = baseHit.mat.color;
 	else FragAlbedo = vec3(1.);
+
+	FragEmission = baseHit.mat.emission;
 
 	FragColor = mix(texture(LastFrameTex, prevTexCoord*0.5+0.5).rgb, color, 1.0/(pow(FragHistory, 0.95)));
 	return;

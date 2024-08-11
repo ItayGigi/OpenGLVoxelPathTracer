@@ -5,6 +5,7 @@ out vec3 FragColor;
 in vec2 TexCoord;
 uniform sampler2D Texture;
 uniform sampler2D AlbedoTex;
+uniform sampler2D EmissionTex;
 
 vec3 ACES(const vec3 x) {
 	const float a = 2.51;
@@ -18,6 +19,7 @@ vec3 ACES(const vec3 x) {
 void main()
 {
 	vec3 color = texture(Texture, TexCoord*0.5+0.5).rgb;
+	color += texture(EmissionTex, TexCoord*0.5+0.5).rrr;
 	color *= texture(AlbedoTex, TexCoord*0.5+0.5).rgb; // multiply by albedo
 	color = ACES(color); // tonemapping
 	color = pow(color, vec3(1.0/2.2)); // gamma correction

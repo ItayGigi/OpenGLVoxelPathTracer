@@ -18,6 +18,7 @@ const enum BufferTexture {
 	DepthTexture,
 	AlbedoTexture,
 	NormalTexture,
+	EmissionTexture,
 };
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
@@ -69,7 +70,7 @@ int fpsAverageAmount = 150;
 
 // frame buffers
 unsigned int fbo1, fbo2;
-unsigned int bufferTextures1[5], bufferTextures2[5];
+unsigned int bufferTextures1[6], bufferTextures2[6];
 
 int main() {
 	// initialize glfw
@@ -145,6 +146,7 @@ int main() {
 
 		postProcessShader.setTexture("Texture", bufferTextures1[ScreenTexture], 5 + ScreenTexture);
 		postProcessShader.setTexture("AlbedoTex", bufferTextures1[AlbedoTexture], 5 + AlbedoTexture);
+		postProcessShader.setTexture("EmissionTex", bufferTextures1[EmissionTexture], 5 + EmissionTexture);
 		
 		glBindVertexArray(VAO);
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
@@ -174,7 +176,7 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 	windowWidth = width;
 	windowHeight = height;
 
-	unsigned int attachments[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3, GL_COLOR_ATTACHMENT4};
+	unsigned int attachments[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3, GL_COLOR_ATTACHMENT4, GL_COLOR_ATTACHMENT5};
 
 	for (int i = 0; i < 2; i++)
 	{
@@ -213,6 +215,10 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 		glActiveTexture(GL_TEXTURE0 + 5 + NormalTexture);
 		glBindTexture(GL_TEXTURE_2D, bufferTextures1[NormalTexture]);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8I, windowWidth, windowHeight, 0, GL_RGB_INTEGER, GL_INT, NULL);
+
+		glActiveTexture(GL_TEXTURE0 + 5 + EmissionTexture);
+		glBindTexture(GL_TEXTURE_2D, bufferTextures1[EmissionTexture]);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, windowWidth, windowHeight, 0, GL_RED, GL_FLOAT, NULL);
 
 		if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
 			std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
