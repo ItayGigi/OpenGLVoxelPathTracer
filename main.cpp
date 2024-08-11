@@ -165,6 +165,11 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 	windowWidth = width;
 	windowHeight = height;
 
+	for (int i = 0; i < sizeof(bufferTextures1) / sizeof(unsigned int); i++) {
+		glDeleteTextures(1, &bufferTextures1[i]);
+		glDeleteTextures(1, &bufferTextures2[i]);
+	}
+
 	unsigned int attachments[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3, GL_COLOR_ATTACHMENT4, GL_COLOR_ATTACHMENT5};
 
 	for (int i = 0; i < 2; i++)

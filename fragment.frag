@@ -336,7 +336,28 @@ void main()
 		vec3(0., 1., 0.),
 		vec3(0., -1., 0.),
 		vec3(0., 0., 1.),
-		vec3(0., 0., -1.)
+		vec3(0., 0., -1.),
+
+
+		vec3(1., 1., 0.),
+		vec3(-1., 1., 0.),
+		vec3(-1., 1., 0.),
+		vec3(-1., -1., 0.),
+		vec3(0., 1., 1.),
+		vec3(0., -1., 1.),
+		vec3(0., -1., 1.),
+		vec3(0., -1., -1.),
+		vec3(1., 0., 1.),
+		vec3(-1., 0., 1.),
+		vec3(-1., 0., 1.),
+		vec3(-1., 0., -1.),
+
+		vec3(2., 0., 0.),
+		vec3(-2., 0., 0.),
+		vec3(0., 2., 0.),
+		vec3(0., -2., 0.),
+		vec3(0., 0., 2.),
+		vec3(0., 0., -2.)
 	);
 
 	float minDiff = 1000.;
@@ -346,14 +367,12 @@ void main()
 	for (int i = 0; i < offsets.length(); i++){
 		if (normalPlane * offsets[i] != offsets[i]) continue;
 
-		vec3 currPos = hitPos + offsets[i]*0.05;
+		vec3 currPos = hitPos + offsets[i]*0.03;
 		vec2 currCoord = WorldToLastScreenCoord(currPos);
 		ivec2 currPixel = ivec2((currCoord*0.5+0.5)*Resolution);
-		vec3 actualPos = LastCamPosition + normalize(currPos - LastCamPosition) * texelFetch(LastDepthTex, currPixel, 0).r;
+		vec3 actualPos = LastCamPosition + normalize(currPos - LastCamPosition) * texture(LastDepthTex, currCoord*0.5+0.5, 0).r;
 		float dist = distance(hitPos, actualPos);
 		ivec3 normal = texture(LastNormalTex, currCoord*0.5+0.5, 0).rgb;
-
-		//float history = texelFetch(HistoryTex, currPixel, 0).r;
 
 		if (dist < minDiff && normal == firstHit.normal){
 			minDiff = dist;
@@ -362,10 +381,9 @@ void main()
 		}
 	}
 
-	float historyScale = 1.;
-	if (LastCamPosition != CamPosition) historyScale = pow(firstHit.mat.roughness, 0.15);
-
-	if (minDiff > 0.06) historyScale = 0.;
+	float historyScale = 1. - minDiff*3.;
+	if (LastCamPosition != CamPosition) historyScale *= pow(firstHit.mat.roughness, 0.15);
+	if (minDiff > 0.1) historyScale = 0.;
 
 	FragHistory = texelFetch(HistoryTex, bestPixel, 0).r * historyScale + 1.;
 	FragDepth = firstHit.dist;
@@ -376,6 +394,6 @@ void main()
 
 	FragEmission = firstHit.mat.emission;
 
-	FragColor = mix(texture(LastFrameTex, bestCoord*0.5+0.5).rgb, color, 1.0/(pow(FragHistory, 0.95)));
+	FragColor = mix(texture(LastFrameTex, bestCoord*0.5+0.5).rgb, color, 1.0/(pow(FragHistory, 0.97)));
 	return;
 }
