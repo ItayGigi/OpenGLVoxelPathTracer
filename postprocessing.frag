@@ -3,6 +3,8 @@
 out vec3 FragColor;
 
 in vec2 TexCoord;
+
+uniform uvec2 Resolution;
 uniform sampler2D Texture;
 uniform sampler2D AlbedoTex;
 uniform sampler2D EmissionTex;
@@ -16,11 +18,25 @@ vec3 ACES(const vec3 x) {
 	return (x * (a * x + b)) / (x * (c * x + d) + e);
 }
 
+vec4 averageSample(sampler2D tex, ivec2 loc){
+	return
+		texelFetch(tex, loc, 0)*0.6 +
+		texelFetch(tex, loc + ivec2(1, 0), 0)*0.1 +
+		texelFetch(tex, loc + ivec2(-1, 0), 0)*0.1 +
+		texelFetch(tex, loc + ivec2(0, 1), 0)*0.1 +
+		texelFetch(tex, loc + ivec2(0, -1), 0)*0.1;
+}
+
 void main()
 {
-	vec3 color = texture(Texture, TexCoord*0.5+0.5).rgb;
-	color += texture(EmissionTex, TexCoord*0.5+0.5).rrr;
-	color *= texture(AlbedoTex, TexCoord*0.5+0.5).rgb; // multiply by albedo
+	ivec2 pixelLoc = ivec2((TexCoord*0.5+0.5)*Resolution);
+
+	vec3 color = texelFetch(Texture, pixelLoc, 0).rgb;
+
+	color += texelFetch(EmissionTex, pixelLoc, 0).rrr; // add emission
+
+	color *= averageSample(AlbedoTex, pixelLoc).rgb; // multiply by albedo
+
 	color = ACES(color); // tonemapping
 	color = pow(color, vec3(1.0/2.2)); // gamma correction
 	FragColor = color;

@@ -25,7 +25,7 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 void processInput(GLFWwindow* window);
-void draw(Shader shader, unsigned int VAO);
+void draw(Shader shader, Shader postShader, unsigned int VAO);
 unsigned int createVAO();
 bool loadScene(Shader shader, const char* brickmapPath, const char* brickNames[], const unsigned int brickCount, unsigned int* mapTexture, unsigned int* bricksTexture, unsigned int* matsTexture);
 void updateFPS(GLFWwindow* window);
@@ -127,32 +127,21 @@ int main() {
 	// render loop
 	while (!glfwWindowShouldClose(window))
 	{
+		frameCount++;
+		framesSinceLastMoved++;
+		float currentFrameTime = static_cast<float>(glfwGetTime());
+		deltaTime = currentFrameTime - lastFrameTime;
+		lastFrameTime = currentFrameTime;
+
+		updateFPS(window);
+
 		processInput(window);
 
-		glBindFramebuffer(GL_FRAMEBUFFER, fbo1);
-		glClear(GL_COLOR_BUFFER_BIT);
+		if (camera.Position != lastCamera.Position || camera.Front != lastCamera.Front) {
+			framesSinceLastMoved = 0;
+		}
 
-		shader.use();
-
-		shader.setTexture("LastFrameTex", bufferTextures2[ScreenTexture], 5 + ScreenTexture);
-		shader.setTexture("HistoryTex", bufferTextures2[HistoryTexture], 5 + HistoryTexture);
-		shader.setTexture("LastDepthTex", bufferTextures2[DepthTexture], 5 + DepthTexture);
-		shader.setTexture("LastNormalTex", bufferTextures2[NormalTexture], 5 + NormalTexture);
-
-		draw(shader, VAO);
-
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-		postProcessShader.use();
-
-		postProcessShader.setTexture("Texture", bufferTextures1[ScreenTexture], 5 + ScreenTexture);
-		postProcessShader.setTexture("AlbedoTex", bufferTextures1[AlbedoTexture], 5 + AlbedoTexture);
-		postProcessShader.setTexture("EmissionTex", bufferTextures1[EmissionTexture], 5 + EmissionTexture);
-		
-		glBindVertexArray(VAO);
-		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-
-		std::swap(fbo1, fbo2);
-		std::swap(bufferTextures1, bufferTextures2);
+		draw(shader, postProcessShader, VAO);
 
 		glfwPollEvents();
 		glfwSwapBuffers(window);
@@ -332,18 +321,9 @@ unsigned int createVAO() {
 	return VAO;
 }
 
-void draw(Shader shader, unsigned int VAO) {
-	frameCount++;
-	framesSinceLastMoved++;
-	float currentFrameTime = static_cast<float>(glfwGetTime());
-	deltaTime = currentFrameTime - lastFrameTime;
-	lastFrameTime = currentFrameTime;
-
-	updateFPS(window);
-
-	if (camera.Position != lastCamera.Position || camera.Front != lastCamera.Front) {
-		framesSinceLastMoved = 0;
-	}
+void draw(Shader shader, Shader postShader, unsigned int VAO) {
+	glBindFramebuffer(GL_FRAMEBUFFER, fbo1);
+	glClear(GL_COLOR_BUFFER_BIT);
 
 	shader.use();
 
@@ -356,10 +336,29 @@ void draw(Shader shader, unsigned int VAO) {
 	shader.setUVec2("Resolution", windowWidth, windowHeight);
 
 	shader.setUInt("FrameCount", frameCount);
-	shader.setUInt("AccumulatedFramesCount", framesSinceLastMoved);
+
+	shader.setTexture("LastFrameTex", bufferTextures2[ScreenTexture], 5 + ScreenTexture);
+	shader.setTexture("HistoryTex", bufferTextures2[HistoryTexture], 5 + HistoryTexture);
+	shader.setTexture("LastDepthTex", bufferTextures2[DepthTexture], 5 + DepthTexture);
+	shader.setTexture("LastNormalTex", bufferTextures2[NormalTexture], 5 + NormalTexture);
 
 	glBindVertexArray(VAO);
 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	postShader.use();
+
+	postShader.setUVec2("Resolution", windowWidth, windowHeight);
+
+	postShader.setTexture("Texture", bufferTextures1[ScreenTexture], 5 + ScreenTexture);
+	postShader.setTexture("AlbedoTex", bufferTextures1[AlbedoTexture], 5 + AlbedoTexture);
+	postShader.setTexture("EmissionTex", bufferTextures1[EmissionTexture], 5 + EmissionTexture);
+
+	glBindVertexArray(VAO);
+	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
+	std::swap(fbo1, fbo2);
+	std::swap(bufferTextures1, bufferTextures2);
 
 	lastCamera = camera;
 }
