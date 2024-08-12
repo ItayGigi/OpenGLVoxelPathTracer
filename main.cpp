@@ -25,10 +25,11 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 void processInput(GLFWwindow* window);
-void draw(Shader shader, Shader postShader, unsigned int VAO);
-unsigned int createVAO();
-bool loadScene(Shader shader, const char* brickmapPath, const char* brickNames[], const unsigned int brickCount, unsigned int* mapTexture, unsigned int* bricksTexture, unsigned int* matsTexture);
 void updateFPS(GLFWwindow* window);
+unsigned int createVAO();
+void draw(Shader shader, Shader postShader, unsigned int VAO);
+bool loadScene(Shader shader, const char* brickmapPath, const char* brickNames[], const unsigned int brickCount, unsigned int* mapTexture, unsigned int* bricksTexture, unsigned int* matsTexture);
+bool isPositionOccupied(const float x, const float y, const float z);
 
 // window
 GLFWwindow* window;
@@ -43,7 +44,7 @@ float lastY = windowHeight / 2.0f;
 bool firstMouse = true;
 
 // scene
-const char* brickPaths[3] = { "bricks/block.vox", "bricks/chair.vox", "bricks/light.vox" };
+const char* brickPaths[3] = { "bricks/frame.vox", "bricks/chair.vox", "bricks/light.vox" };
 const char* scenePath = "map.vox";
 
 std::unique_ptr<BrickMap> brickMap;
@@ -142,6 +143,8 @@ int main() {
 
 		if (camera.Position != lastCamera.Position || camera.Front != lastCamera.Front) {
 			framesSinceLastMoved = 0;
+
+			//std::cout << int(camera.Position.x * 8.0f) % 8 << ", " << int(camera.Position.y * 8.0f) % 8 << ", " << int(camera.Position.z * 8.0f) % 8 << " - " << isPositionOccupied(camera.Position.x, camera.Position.y, camera.Position.z) << "\n";
 		}
 
 		draw(shader, postProcessShader, VAO);
@@ -173,7 +176,7 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 		glDeleteTextures(1, &bufferTextures2[i]);
 	}
 
-	unsigned int attachments[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3, GL_COLOR_ATTACHMENT4, GL_COLOR_ATTACHMENT5};
+	unsigned int attachments[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3, GL_COLOR_ATTACHMENT4, GL_COLOR_ATTACHMENT5 };
 
 	for (int i = 0; i < 2; i++)
 	{
@@ -220,7 +223,7 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 		if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
 			std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
 
-		glDrawBuffers(sizeof(attachments)/sizeof(unsigned int), attachments);
+		glDrawBuffers(sizeof(attachments) / sizeof(unsigned int), attachments);
 
 		std::swap(fbo1, fbo2);
 		std::swap(bufferTextures1, bufferTextures2);
@@ -382,21 +385,21 @@ bool loadScene(Shader shader, const char* brickmapPath, const char* brickNames[]
 	glGenTextures(1, mapTexture);
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, *matsTexture);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_R32UI, brickMap->size_x*brickMap->size_y/8, brickMap->size_z, 0, GL_RED_INTEGER, GL_UNSIGNED_INT, brickMap->data);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_R32UI, brickMap->size_x * brickMap->size_y / 8, brickMap->size_z, 0, GL_RED_INTEGER, GL_UNSIGNED_INT, brickMap->data);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
 	glUniform1i(glGetUniformLocation(shader.ID, "BrickMap"), 0);
-	
+
 	// bricks
 	glGenTextures(1, bricksTexture);
 	glActiveTexture(GL_TEXTURE0 + 1);
 	glBindTexture(GL_TEXTURE_2D_ARRAY, *bricksTexture);
 
 	// allocate bricks texture array
-	glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_R32UI,	BRICK_SIZE * BRICK_SIZE / 8, BRICK_SIZE, brickCount, 0, GL_RED_INTEGER, GL_UNSIGNED_INT, NULL);
+	glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_R32UI, BRICK_SIZE * BRICK_SIZE / 8, BRICK_SIZE, brickCount, 0, GL_RED_INTEGER, GL_UNSIGNED_INT, NULL);
 
 	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -444,4 +447,15 @@ bool loadScene(Shader shader, const char* brickmapPath, const char* brickNames[]
 	camera = brickMap->camera;
 
 	return true;
+}
+
+bool isPositionOccupied(const float x, const float y, const float z) {
+	if (x < 0.0f || x >= brickMap->size_x || y < 0.0f || y >= brickMap->size_y || z < 0.0f || z >= brickMap->size_z) return false;
+
+	unsigned int brickID = (brickMap->data[(int(z) * brickMap->size_x + int(x)) * brickMap->size_y / 8 + int(y) / 8] >> ((int(y) % 8) * 4)) & 0xFu;
+	
+	if (brickID == 0) return false;
+
+	unsigned int voxelMat = (bricks[brickID - 1]->data[((int(z * 8.0f) % 8) * 8 + (int(x * 8.0f) % 8))] >> ((int(y * 8.0f) % 8) * 4)) & 0xFu;
+	return voxelMat != 0;
 }
