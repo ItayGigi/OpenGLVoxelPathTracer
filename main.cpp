@@ -43,8 +43,8 @@ float lastY = windowHeight / 2.0f;
 bool firstMouse = true;
 
 // scene
-const char* brickPaths[3] = { "bricks/frame.vox", "bricks/chair.vox", "bricks/light.vox" };
-const char* scenePath = "bigmenger.vox";
+const char* brickPaths[3] = { "bricks/block.vox", "bricks/chair.vox", "bricks/light.vox" };
+const char* scenePath = "map.vox";
 
 std::unique_ptr<BrickMap> brickMap;
 std::vector<std::unique_ptr<Brick>> bricks;
