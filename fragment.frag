@@ -286,6 +286,70 @@ vec2 WorldToLastScreenCoord(vec3 p){
 	return texCoord;
 }
 
+uniform vec3[] offsets = vec3[](
+	vec3(0.),
+	vec3(1., 0., 0.),
+	vec3(-1., 0., 0.),
+	vec3(0., 1., 0.),
+	vec3(0., -1., 0.),
+	vec3(0., 0., 1.),
+	vec3(0., 0., -1.),
+
+
+	vec3(1., 1., 0.),
+	vec3(-1., 1., 0.),
+	vec3(-1., 1., 0.),
+	vec3(-1., -1., 0.),
+	vec3(0., 1., 1.),
+	vec3(0., -1., 1.),
+	vec3(0., -1., 1.),
+	vec3(0., -1., -1.),
+	vec3(1., 0., 1.),
+	vec3(-1., 0., 1.),
+	vec3(-1., 0., 1.),
+	vec3(-1., 0., -1.),
+
+	vec3(2., 0., 0.),
+	vec3(-2., 0., 0.),
+	vec3(0., 2., 0.),
+	vec3(0., -2., 0.),
+	vec3(0., 0., 2.),
+	vec3(0., 0., -2.)
+	);
+
+struct SamplePoint{
+	float dist;
+	float history;
+	vec3 color;
+};
+
+SamplePoint FindBestSample(GridHit hit, Ray ray){
+	if (!hit.hit) return SamplePoint(100., 0., vec3(0.));
+
+	vec3 hitPos = CamPosition + hit.dist * ray.dir;
+	vec3 normalPlane = vec3(1.) - abs(hit.normal);
+
+	float bestDist = 100.;
+	vec2 bestCoord = vec2(0.);
+
+	for (int i = 0; i < offsets.length(); i++){
+		if (normalPlane * offsets[i] != offsets[i]) continue;
+
+		vec3 currPos = hitPos + offsets[i]*0.05;
+		vec2 currCoord = WorldToLastScreenCoord(currPos)*0.5+0.5;
+
+		vec3 actualPos = LastCamPosition + normalize(currPos - LastCamPosition) * texture(LastDepthTex, currCoord, 0).r;
+		float dist = distance(hitPos, actualPos);
+		ivec3 normal = texture(LastNormalTex, currCoord, 0).rgb;
+
+		if (dist < bestDist && normal == hit.normal){
+			bestDist = dist;
+			bestCoord = currCoord;
+		}
+	}
+	return SamplePoint(bestDist, texelFetch(HistoryTex, ivec2(bestCoord*Resolution), 0).r, texture(LastFrameTex, bestCoord).rgb);
+}
+
 void main()
 {
 	// if (TexCoord.y > 0.98){
@@ -297,14 +361,6 @@ void main()
 	INIT_RNG;
 
 	float aspect = float(Resolution.x)/float(Resolution.y);
-
-	// vec3 dir = normalize((CamRotation * vec4(TexCoord.x*aspect, TexCoord.y, 1.5, 1.)).xyz);
-	// Ray ray = Ray(CamPosition, dir, 1.0/dir);
-	// FragColor = vec3(0.);
-	// for	(int i = 0; i < 1500; i++){
-	// 	if (RaySphereIntersection(ray, CosWeightedRandomHemisphereDirection(normalize(vec3(1., 1., 1.))), 0.005) > 0.) FragColor = vec3(1.);
-	// }
-	// return;
 
 	vec3 sumColor = vec3(0.);
 	vec3 localNearPlane = vec3(TexCoord.x*aspect, TexCoord.y, 1.5);
@@ -322,70 +378,16 @@ void main()
 	vec3 color = sumColor/SAMPLES;
 
 	// spatiotemporal denoisification
+	SamplePoint sample = FindBestSample(firstHit, firstRay);
 
-	vec3 hitPos = CamPosition + firstHit.dist * firstRay.dir;
-	vec2 prevTexCoord = WorldToLastScreenCoord(hitPos);
-	ivec2 prevPixel = ivec2((prevTexCoord*0.5+0.5)*Resolution);
-
-	vec3 normalPlane = vec3(1.) - abs(firstHit.normal);
-
-	vec3[] offsets = vec3[](
-		vec3(0.),
-		vec3(1., 0., 0.),
-		vec3(-1., 0., 0.),
-		vec3(0., 1., 0.),
-		vec3(0., -1., 0.),
-		vec3(0., 0., 1.),
-		vec3(0., 0., -1.),
-
-
-		vec3(1., 1., 0.),
-		vec3(-1., 1., 0.),
-		vec3(-1., 1., 0.),
-		vec3(-1., -1., 0.),
-		vec3(0., 1., 1.),
-		vec3(0., -1., 1.),
-		vec3(0., -1., 1.),
-		vec3(0., -1., -1.),
-		vec3(1., 0., 1.),
-		vec3(-1., 0., 1.),
-		vec3(-1., 0., 1.),
-		vec3(-1., 0., -1.),
-
-		vec3(2., 0., 0.),
-		vec3(-2., 0., 0.),
-		vec3(0., 2., 0.),
-		vec3(0., -2., 0.),
-		vec3(0., 0., 2.),
-		vec3(0., 0., -2.)
-	);
-
-	float minDiff = 1000.;
-	vec2 bestCoord = prevTexCoord;
-	ivec2 bestPixel = prevPixel;
-
-	for (int i = 0; i < offsets.length(); i++){
-		if (normalPlane * offsets[i] != offsets[i]) continue;
-
-		vec3 currPos = hitPos + offsets[i]*0.03;
-		vec2 currCoord = WorldToLastScreenCoord(currPos);
-		ivec2 currPixel = ivec2((currCoord*0.5+0.5)*Resolution);
-		vec3 actualPos = LastCamPosition + normalize(currPos - LastCamPosition) * texture(LastDepthTex, currCoord*0.5+0.5, 0).r;
-		float dist = distance(hitPos, actualPos);
-		ivec3 normal = texture(LastNormalTex, currCoord*0.5+0.5, 0).rgb;
-
-		if (dist < minDiff && normal == firstHit.normal){
-			minDiff = dist;
-			bestCoord = currCoord;
-			bestPixel = currPixel;
-		}
-	}
-
-	float historyScale = 1. - minDiff*3.;
+	float historyScale = 1. - sample.dist*1.5;
 	if (LastCamPosition != CamPosition) historyScale *= pow(firstHit.mat.roughness, 0.15);
-	if (minDiff > 0.1) historyScale = 0.;
+	if (sample.dist > 0.1) historyScale = 0.;
 
-	FragHistory = texelFetch(HistoryTex, bestPixel, 0).r * historyScale + 1.;
+	FragColor = vec3(historyScale);
+	//return;
+
+	FragHistory = sample.history * historyScale + 1.;
 	FragDepth = firstHit.dist;
 	FragNormal = firstHit.normal;
 
@@ -394,6 +396,6 @@ void main()
 
 	FragEmission = firstHit.mat.emission;
 
-	FragColor = mix(texture(LastFrameTex, bestCoord*0.5+0.5).rgb, color, 1.0/(pow(FragHistory, 0.97)));
+	FragColor = mix(sample.color, color, 1.0/(pow(FragHistory, 0.97)));
 	return;
 }
