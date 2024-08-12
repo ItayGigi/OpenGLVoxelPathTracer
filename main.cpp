@@ -43,8 +43,8 @@ float lastY = windowHeight / 2.0f;
 bool firstMouse = true;
 
 // scene
-const char* brickPaths[3] = { "bricks/frame.vox", "bricks/chair.vox", "bricks/light.vox" };
-const char* scenePath = "menger.vox";
+const char* brickPaths[3] = { "bricks/block.vox", "bricks/chair.vox", "bricks/light.vox" };
+const char* scenePath = "map.vox";
 
 std::unique_ptr<BrickMap> brickMap;
 std::vector<std::unique_ptr<Brick>> bricks;
@@ -409,7 +409,7 @@ bool loadScene(Shader shader, const char* brickmapPath, const char* brickNames[]
 	{
 		bricks.push_back(std::unique_ptr<Brick>(new Brick((std::string("assets/") + brickNames[i]).c_str())));
 
-		Brick* brick = bricks.front().get();
+		Brick* brick = bricks.back().get();
 
 		if (!brick->data) return false; // failed to load brick
 
