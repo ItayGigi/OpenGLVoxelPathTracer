@@ -35,11 +35,15 @@
     <ClInclude Include="brick.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="mathutil.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="fragment.frag">
       <Filter>Source Files</Filter>
     </None>
+    <None Include="postprocessing.frag" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="vertex.vert">

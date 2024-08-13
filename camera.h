@@ -4,6 +4,8 @@
 #include <glad/glad.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <functional>
+#include "mathutil.h"
 
 // Defines several possible options for camera movement. Used as abstraction to stay away from window-system specific input methods
 enum Camera_Movement {
@@ -66,21 +68,28 @@ public:
     }
 
     // processes input received from any keyboard-like input system. Accepts input parameter in the form of camera defined ENUM (to abstract it from windowing systems)
-    void ProcessKeyboard(Camera_Movement direction, float deltaTime)
+    void ProcessKeyboard(Camera_Movement direction, float deltaTime, std::function<bool(const glm::vec3)> isPositionOccupied, glm::ivec3 gridSize)
     {
-        float velocity = MovementSpeed * deltaTime;
+        float moveAmount = MovementSpeed * deltaTime;
+        glm::vec3 movement(0.0f);
+
         if (direction == FORWARD)
-            Position += glm::normalize(glm::cross(Right, WorldUp)) * velocity;
+            movement = glm::normalize(glm::cross(Right, WorldUp));
         if (direction == BACKWARD)
-            Position -= glm::normalize(glm::cross(Right, WorldUp)) * velocity;
+            movement = -glm::normalize(glm::cross(Right, WorldUp));
         if (direction == LEFT)
-            Position -= Right * velocity;
+            movement = -Right;
         if (direction == RIGHT)
-            Position += Right * velocity;
+            movement = Right;
         if (direction == UP)
-            Position += WorldUp * velocity;
+            movement = WorldUp;
         if (direction == DOWN)
-            Position -= WorldUp * velocity;
+            movement = -WorldUp;
+
+        util::RayHit hit = util::rayCast(Position, movement, isPositionOccupied, 0.125f, gridSize, moveAmount);
+
+        if (hit.hit && hit.dist > 0.0f) Position += movement * hit.dist + glm::vec3(hit.normal) * 0.01f;
+        else Position += movement * moveAmount;
     }
 
     // processes input received from a mouse input system. Expects the offset value in both the x and y direction.

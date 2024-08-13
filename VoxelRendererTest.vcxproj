@@ -138,11 +138,13 @@
   <ItemGroup>
     <ClInclude Include="brick.h" />
     <ClInclude Include="camera.h" />
+    <ClInclude Include="mathutil.h" />
     <ClInclude Include="ogt_vox.h" />
     <ClInclude Include="shader.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="fragment.frag" />
+    <None Include="postprocessing.frag" />
     <Text Include="vertex.vert">
       <FileType>Document</FileType>
     </Text>

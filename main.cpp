@@ -29,7 +29,7 @@ void updateFPS(GLFWwindow* window);
 unsigned int createVAO();
 void draw(Shader shader, Shader postShader, unsigned int VAO);
 bool loadScene(Shader shader, const char* brickmapPath, const char* brickNames[], const unsigned int brickCount, unsigned int* mapTexture, unsigned int* bricksTexture, unsigned int* matsTexture);
-bool isPositionOccupied(const float x, const float y, const float z);
+bool isPositionOccupied(const glm::vec3 pos);
 
 // window
 GLFWwindow* window;
@@ -239,17 +239,17 @@ void processInput(GLFWwindow* window)
 		glfwSetWindowShouldClose(window, true);
 
 	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-		camera.ProcessKeyboard(FORWARD, deltaTime);
+		camera.ProcessKeyboard(FORWARD, deltaTime, &isPositionOccupied, brickMap->size * 8);
 	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-		camera.ProcessKeyboard(BACKWARD, deltaTime);
+		camera.ProcessKeyboard(BACKWARD, deltaTime, &isPositionOccupied, brickMap->size * 8);
 	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-		camera.ProcessKeyboard(LEFT, deltaTime);
+		camera.ProcessKeyboard(LEFT, deltaTime, &isPositionOccupied, brickMap->size * 8);
 	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-		camera.ProcessKeyboard(RIGHT, deltaTime);
+		camera.ProcessKeyboard(RIGHT, deltaTime, &isPositionOccupied, brickMap->size * 8);
 	if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
-		camera.ProcessKeyboard(UP, deltaTime);
+		camera.ProcessKeyboard(UP, deltaTime, &isPositionOccupied, brickMap->size * 8);
 	if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS)
-		camera.ProcessKeyboard(DOWN, deltaTime);
+		camera.ProcessKeyboard(DOWN, deltaTime, &isPositionOccupied, brickMap->size * 8);
 }
 
 // glfw: whenever the mouse moves, this callback is called
@@ -380,12 +380,12 @@ bool loadScene(Shader shader, const char* brickmapPath, const char* brickNames[]
 	if (!brickMap->data) return false; // failed to load brickmap
 
 	shader.use();
-	shader.setUVec3("MapSize", brickMap->size_x, brickMap->size_y, brickMap->size_z);
+	shader.setUVec3("MapSize", brickMap->size.x, brickMap->size.y, brickMap->size.z);
 
 	glGenTextures(1, mapTexture);
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, *matsTexture);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_R32UI, brickMap->size_x * brickMap->size_y / 8, brickMap->size_z, 0, GL_RED_INTEGER, GL_UNSIGNED_INT, brickMap->data);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_R32UI, brickMap->size.x * brickMap->size.y / 8, brickMap->size.z, 0, GL_RED_INTEGER, GL_UNSIGNED_INT, brickMap->data);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -449,13 +449,13 @@ bool loadScene(Shader shader, const char* brickmapPath, const char* brickNames[]
 	return true;
 }
 
-bool isPositionOccupied(const float x, const float y, const float z) {
-	if (x < 0.0f || x >= brickMap->size_x || y < 0.0f || y >= brickMap->size_y || z < 0.0f || z >= brickMap->size_z) return false;
+bool isPositionOccupied(const glm::vec3 pos) {
+	if (pos.x < 0.0f || pos.x >= brickMap->size.x || pos.y < 0.0f || pos.y >= brickMap->size.y || pos.z < 0.0f || pos.z >= brickMap->size.z) return false;
 
-	unsigned int brickID = (brickMap->data[(int(z) * brickMap->size_x + int(x)) * brickMap->size_y / 8 + int(y) / 8] >> ((int(y) % 8) * 4)) & 0xFu;
+	unsigned int brickID = (brickMap->data[(int(pos.z) * brickMap->size.x + int(pos.x)) * brickMap->size.y / 8 + int(pos.y) / 8] >> ((int(pos.y) % 8) * 4)) & 0xFu;
 	
 	if (brickID == 0) return false;
 
-	unsigned int voxelMat = (bricks[brickID - 1]->data[((int(z * 8.0f) % 8) * 8 + (int(x * 8.0f) % 8))] >> ((int(y * 8.0f) % 8) * 4)) & 0xFu;
+	unsigned int voxelMat = (bricks[brickID - 1]->data[((int(pos.z * 8.0f) % 8) * 8 + (int(pos.x * 8.0f) % 8))] >> ((int(pos.y * 8.0f) % 8) * 4)) & 0xFu;
 	return voxelMat != 0;
 }

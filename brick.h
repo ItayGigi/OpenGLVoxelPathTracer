@@ -61,7 +61,7 @@ class BrickMap
 public:
 	glm::vec3 env_color;
 	Camera camera;
-	unsigned int size_x, size_y, size_z;
+	glm::ivec3 size;
 	uint32_t* data = NULL;
 
 	BrickMap() {}
@@ -73,18 +73,18 @@ public:
 
 		const ogt_vox_model* model = scene->models[0];
 
-		size_x = model->size_x;
-		size_y = model->size_z;
-		size_z = model->size_y;
+		size.x = model->size_x;
+		size.y = model->size_z;
+		size.z = model->size_y;
 
-		if (size_y % 8 != 0) {
+		if (size.y % 8 != 0) {
 			std::cerr << filePath << ": brickmap's height has to be a multiple of 8." << std::endl;
 			ogt_vox_destroy_scene(scene);
 			return;
 		}
 
-		data = new uint32_t[size_x*size_y*size_z/8];
-		encodeData(model->voxel_data, data, size_x, size_y, size_z);
+		data = new uint32_t[size.x*size.y*size.z/8];
+		encodeData(model->voxel_data, data, size.x, size.y, size.z);
 
 		env_color = glm::vec3(scene->palette.color[255].r, scene->palette.color[255].g, scene->palette.color[255].b) * scene->materials.matl[255].emit * (float)pow(10, scene->materials.matl[255].flux) / 255.0f;
 
@@ -94,7 +94,7 @@ public:
 			cos(glm::radians(angles.x)) * sin(glm::radians(angles.y)),
 			sin(glm::radians(angles.x)),
 			cos(glm::radians(angles.x)) * cos(glm::radians(angles.y)));
-		glm::vec3 camPos = glm::vec3(voxCam.focus[0]+(float)size_x/2.0f, voxCam.focus[2], voxCam.focus[1] + (float)size_z / 2.0f) - glm::vec3(voxCam.radius)*camFront;
+		glm::vec3 camPos = glm::vec3(voxCam.focus[0]+(float)size.x/2.0f, voxCam.focus[2], voxCam.focus[1] + (float)size.z / 2.0f) - glm::vec3(voxCam.radius)*camFront;
 		camera = Camera(camPos, {{0.0f},{1.0f},{0.0f}}, angles.y, angles.x);
 	}
 	
