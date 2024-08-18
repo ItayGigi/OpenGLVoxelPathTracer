@@ -86,9 +86,24 @@ public:
         if (direction == DOWN)
             movement = -WorldUp;
 
-        util::RayHit hit = util::rayCast(Position, movement, isPositionOccupied, 0.125f, gridSize, moveAmount);
+        glm::vec3 offsets[] = {
+            {{1.0f}, {0.0f}, {0.0f}},
+            {{0.0f}, {1.0f}, {0.0f}},
+            {{0.0f}, {0.0f}, {1.0f}} };
 
-        if (hit.hit && hit.dist > 0.0f) Position += movement * hit.dist + glm::vec3(hit.normal) * 0.01f;
+        util::RayHit minHit = { false, 1000.0f, glm::ivec3(0) };
+
+        for (glm::vec3 offset : offsets)
+        {
+            if (movement * offset == glm::vec3(0.0f, 0.0f, 0.0f)) continue;
+
+            util::RayHit hit = util::rayCast(Position + glm::sign(movement) * offset * 0.1f, movement, isPositionOccupied, 0.125f, gridSize, moveAmount);
+            if (hit.hit && hit.dist < minHit.dist) {
+                minHit = hit;
+            }
+        }
+
+        if (minHit.hit && minHit.dist >= 0.0f) Position += movement * minHit.dist;
         else Position += movement * moveAmount;
     }
 

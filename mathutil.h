@@ -62,12 +62,12 @@ namespace util {
 
 			mask = glm::bvec3(t_next.x < t_next.y && t_next.x < t_next.z, t_next.y < t_next.x && t_next.y < t_next.z, t_next.z < t_next.x && t_next.z < t_next.y);
 
-			dist = glm::min(glm::min(t_next.x, t_next.y), t_next.z);
+			dist += glm::min(glm::min(t_next.x, t_next.y), t_next.z);
 			t_next += glm::vec3(mask) * t_delta;
 			curr_voxel += glm::ivec3(mask) * step;
 		}
 
-		if (isPositionOccupied(glm::vec3(curr_voxel) * voxelSize))
+		if (isPositionOccupied(glm::vec3(curr_voxel) * voxelSize) && dist < limit)
 			return { true, dist, -glm::ivec3(mask) * step };
 
 		return { false, INFINITY, glm::ivec3(0) };
