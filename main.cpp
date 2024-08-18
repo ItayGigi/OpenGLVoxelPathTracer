@@ -45,7 +45,7 @@ bool firstMouse = true;
 
 // scene
 const char* brickPaths[3] = { "bricks/frame.vox", "bricks/chair.vox", "bricks/light.vox" };
-const char* scenePath = "map.vox";
+const char* scenePath = "menger.vox";
 
 std::unique_ptr<BrickMap> brickMap;
 std::vector<std::unique_ptr<Brick>> bricks;
@@ -138,6 +138,8 @@ int main() {
 		lastFrameTime = currentFrameTime;
 
 		updateFPS(window);
+
+		camera.Update(deltaTime, &isPositionOccupied, brickMap->size * 8);
 
 		processInput(window);
 

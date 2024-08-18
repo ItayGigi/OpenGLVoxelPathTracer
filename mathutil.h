@@ -52,7 +52,7 @@ namespace util {
 		glm::vec3 t_next = (glm::vec3(curr_voxel + glm::max(step, glm::ivec3(0))) * voxelSize - ray_start) / dir;
 		glm::vec3 t_delta = voxelSize / abs(dir);
 
-		float dist = 0.;
+		float dist = glm::max(tMin, 0.0f);
 		glm::bvec3 mask = boundHit.mask;
 
 		int iter = 0;
