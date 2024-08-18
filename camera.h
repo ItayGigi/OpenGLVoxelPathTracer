@@ -91,20 +91,32 @@ public:
             {{0.0f}, {1.0f}, {0.0f}},
             {{0.0f}, {0.0f}, {1.0f}} };
 
-        util::RayHit minHit = { false, 1000.0f, glm::ivec3(0) };
-
-        for (glm::vec3 offset : offsets)
+        while (movement != glm::vec3(0.0f, 0.0f, 0.0f) && moveAmount > 0.0f)
         {
-            if (movement * offset == glm::vec3(0.0f, 0.0f, 0.0f)) continue;
+            util::RayHit minHit = { false, 1000.0f, glm::ivec3(0) };
 
-            util::RayHit hit = util::rayCast(Position + glm::sign(movement) * offset * 0.1f, movement, isPositionOccupied, 0.125f, gridSize, moveAmount);
-            if (hit.hit && hit.dist < minHit.dist) {
-                minHit = hit;
+            for (glm::vec3 offset : offsets)
+            {
+                if (movement * offset == glm::vec3(0.0f, 0.0f, 0.0f)) continue;
+
+                util::RayHit hit = util::rayCast(Position + glm::sign(movement) * offset * 0.1f, movement, isPositionOccupied, 0.125f, gridSize, moveAmount);
+                if (hit.hit && hit.dist < minHit.dist) {
+                    minHit = hit;
+                }
+            }
+
+            if (minHit.hit && minHit.dist >= 0.0f) {
+                Position += movement * minHit.dist;
+
+                moveAmount -= minHit.dist;
+                movement *= glm::ivec3(1) - abs(minHit.normal);
+                moveAmount *= glm::length(movement);
+            }
+            else {
+                Position += movement * moveAmount;
+                moveAmount = 0.0f;
             }
         }
-
-        if (minHit.hit && minHit.dist >= 0.0f) Position += movement * minHit.dist;
-        else Position += movement * moveAmount;
     }
 
     // processes input received from a mouse input system. Expects the offset value in both the x and y direction.
