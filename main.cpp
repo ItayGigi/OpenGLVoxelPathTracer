@@ -7,6 +7,9 @@
 #include "shader.h"
 #include "camera.h"
 #include "brick.h"
+#include "imgui.h"
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_opengl3.h"
 
 #include <queue>
 
@@ -25,7 +28,7 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 void processInput(GLFWwindow* window);
-void updateFPS(GLFWwindow* window);
+void createDebugImGuiWindow();
 unsigned int createVAO();
 void draw(Shader shader, Shader postShader, unsigned int VAO);
 bool loadScene(Shader shader, const char* brickmapPath, const char* brickNames[], const unsigned int brickCount, unsigned int* mapTexture, unsigned int* bricksTexture, unsigned int* matsTexture);
@@ -107,6 +110,18 @@ int main() {
 		return -1;
 	}
 
+	// Setup Dear ImGui context
+	IMGUI_CHECKVERSION();
+	ImGui::CreateContext();
+	ImGuiIO& io = ImGui::GetIO();
+	io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+	io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+	//io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;         // IF using Docking Branch
+
+	// Setup Platform/Renderer backends
+	ImGui_ImplGlfw_InitForOpenGL(window, true);          // Second param install_callback=true will install GLFW callbacks and chain to existing ones.
+	ImGui_ImplOpenGL3_Init();
+
 	unsigned int VAO = createVAO();
 
 	Shader shader("vertex.vert", "fragment.frag");
@@ -137,8 +152,6 @@ int main() {
 		deltaTime = currentFrameTime - lastFrameTime;
 		lastFrameTime = currentFrameTime;
 
-		updateFPS(window);
-
 		camera.Update(deltaTime, &isPositionOccupied, brickMap->size * 8);
 
 		processInput(window);
@@ -149,9 +162,19 @@ int main() {
 			//std::cout << int(camera.Position.x * 8.0f) % 8 << ", " << int(camera.Position.y * 8.0f) % 8 << ", " << int(camera.Position.z * 8.0f) % 8 << " - " << isPositionOccupied(camera.Position.x, camera.Position.y, camera.Position.z) << "\n";
 		}
 
+		glfwPollEvents();
+
+		ImGui_ImplOpenGL3_NewFrame();
+		ImGui_ImplGlfw_NewFrame();
+		ImGui::NewFrame();
+
+		createDebugImGuiWindow();
+
 		draw(shader, postProcessShader, VAO);
 
-		glfwPollEvents();
+		ImGui::Render();
+		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
 		glfwSwapBuffers(window);
 	}
 
@@ -164,6 +187,10 @@ int main() {
 	}
 
 	glfwTerminate();
+	ImGui_ImplOpenGL3_Shutdown();
+	ImGui_ImplGlfw_Shutdown();
+	ImGui::DestroyContext();
+
 	return 0;
 }
 
@@ -282,7 +309,11 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 	camera.ProcessMouseScroll(static_cast<float>(yoffset));
 }
 
-void updateFPS(GLFWwindow* window) {
+void createDebugImGuiWindow() {
+	ImGui::SetNextWindowPos({ 0, 0 });
+
+	ImGui::Begin("Debug Window", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
+
 	lastFrameTimes.push(deltaTime);
 	frameTimesSum += deltaTime;
 
@@ -291,8 +322,14 @@ void updateFPS(GLFWwindow* window) {
 		lastFrameTimes.pop();
 
 		float average = fpsAverageAmount / frameTimesSum;
-		glfwSetWindowTitle(window, std::to_string(average).c_str());
+		ImGui::Text("FPS = %d", int(fpsAverageAmount / frameTimesSum));
 	}
+	else {
+		ImGui::Text("FPS = ...");
+	}
+
+	ImGui::Text("Position: %.2f, %.2f, %.2f", camera.Position.x, camera.Position.y, camera.Position.z);
+	ImGui::End();
 }
 
 unsigned int createVAO() {
