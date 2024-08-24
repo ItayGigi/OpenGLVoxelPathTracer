@@ -42,9 +42,9 @@ public:
     float MouseSensitivity;
     float colliderHalfWidth = 0.05f;
     float yVel = 0.0f;
-    float gravityScale = 2.0f;
-    float jumpForce = 1.0f;
-    bool isGrounded = false, isHeadStuck = false;
+    float gravityScale = 3.0f;
+    float jumpForce = 1.2f;
+    bool isGrounded = false, isHeadBump = false;
 
     // constructor with vectors
     Camera(glm::vec3 position = glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f), float yaw = YAW, float pitch = PITCH) : Front(glm::vec3(0.0f, 0.0f, -1.0f)), MovementSpeed(SPEED), MouseSensitivity(SENSITIVITY)
@@ -101,88 +101,24 @@ public:
             //movement = -WorldUp;
     }
 
-    void Move(glm::vec3 dir, float amount, std::function<bool(const glm::vec3)> isPositionOccupied, glm::ivec3 gridSize) {
-        dir = glm::normalize(dir);
-
-        glm::ivec3 offsets[] = {
-            glm::ivec3(1,  1,  1),
-            glm::ivec3(1,  1, -1),
-            glm::ivec3(1, -1,  1),
-            glm::ivec3(1, -1, -1),
-            glm::ivec3(-1,  1,  1),
-            glm::ivec3(-1,  1, -1),
-            glm::ivec3(-1, -1,  1),
-            glm::ivec3(-1, -1, -1)
-        };
-
-        glm::ivec3 sides[] = {
-            glm::ivec3(1,  0,  0),
-            glm::ivec3(0,  1,  0),
-            glm::ivec3(0,  0,  1),
-            glm::ivec3(-1,  0,  0),
-            glm::ivec3(0, -1,  0),
-            glm::ivec3(0,  0, -1),
-        };
-
-        glm::vec3 wallOffset(0.0f);
-
-        while (dir != glm::vec3(0.0f) && amount > 0.0f)
-        {
-            util::RayHit minHit = { false, 1000.0f, glm::ivec3(0) };
-            glm::ivec3 hitNormal;
-            glm::ivec3 moveSign = glm::sign(dir);
-
-            for (glm::ivec3 side : sides) {
-                if (moveSign * abs(side) != side) continue;
-
-                for (glm::ivec3 offset : offsets)
-                {
-                    if (offset * abs(side) != side) continue;
-
-                    //if (abs(moveSign) == glm::ivec3(1, 0, 0) || abs(moveSign) == glm::ivec3(0, 1, 0) || abs(moveSign) == glm::ivec3(0, 0, 1))
-                    offset = glm::mix(offset, side, 0.8);
-
-                    glm::vec3 origin = Position + glm::vec3(offset) * colliderHalfWidth;
-                    util::RayHit hit = util::rayCast(origin, dir, isPositionOccupied, 0.125f, gridSize, amount);
-                    if (hit.hit && hit.dist < minHit.dist) {
-                        minHit = hit;
-                        hitNormal = -side;
-                    }
-                }
-            }
-
-            if (minHit.hit && minHit.dist >= 0.0f) {
-                Position += dir * minHit.dist + glm::vec3(hitNormal) * 0.0000f;
-
-                //std::cout << hitNormal.x << ", " << hitNormal.y << ", " << hitNormal.z << "\n";
-
-                amount -= minHit.dist;
-                dir *= glm::ivec3(1) - abs(minHit.normal);
-                amount *= glm::length(dir);
-            }
-            else {
-                Position += dir * amount;
-                amount = 0.0f;
-            }
+    void Move(glm::vec3 dir, float amount, std::function<bool(const glm::vec3)> isPositionOccupied, glm::ivec3 gridSize)
+    {
+        glm::vec3 newPos = getMovePosition(Position, dir, amount, isPositionOccupied, gridSize);
+        while (isPositionOccupied(newPos)) {
+            amount -= 0.01f;
+            newPos = getMovePosition(Position, dir, amount, isPositionOccupied, gridSize);
         }
+        Position = newPos;
 
-        bool nowGrounded =
-            isPositionOccupied(Position + glm::vec3(0.7f, -1.001f, 0.7f) * colliderHalfWidth) ||
-            isPositionOccupied(Position + glm::vec3(-0.7f, -1.001f, 0.7f) * colliderHalfWidth) ||
-            isPositionOccupied(Position + glm::vec3(0.7f, -1.001f, -0.7f) * colliderHalfWidth) ||
-            isPositionOccupied(Position + glm::vec3(-0.7f, -1.001f, -0.7f) * colliderHalfWidth);
+        bool nowGrounded = getMovePosition(Position, glm::vec3(0., -1., 0.), 0.1f, isPositionOccupied, gridSize) == Position;
 
-        bool nowHitHead = 
-            isPositionOccupied(Position + glm::vec3(0.7f, 1.001f, 0.7f) * colliderHalfWidth) ||
-            isPositionOccupied(Position + glm::vec3(-0.7f, 1.001f, 0.7f) * colliderHalfWidth) ||
-            isPositionOccupied(Position + glm::vec3(0.7f, 1.001f, -0.7f) * colliderHalfWidth) ||
-            isPositionOccupied(Position + glm::vec3(-0.7f, 1.001f, -0.7f) * colliderHalfWidth);
+        bool nowHeadBump = getMovePosition(Position, glm::vec3(0., 1., 0.), 0.1f, isPositionOccupied, gridSize) == Position;
 
-        if ((!isGrounded && nowGrounded) || (!isHeadStuck && nowHitHead)) {
+        if ((!isGrounded && nowGrounded) || (!isHeadBump && nowHeadBump)) {
             yVel = 0.0f;
         }
         isGrounded = nowGrounded;
-        isHeadStuck = nowHitHead;
+        isHeadBump = nowHeadBump;
     }
 
     // processes input received from a mouse input system. Expects the offset value in both the x and y direction.
@@ -230,6 +166,74 @@ private:
         // also re-calculate the Right and Up vector
         Right = glm::normalize(glm::cross(-Front, WorldUp));  // normalize the vectors, because their length gets closer to 0 the more you look up or down which results in slower movement.
         Up = glm::normalize(glm::cross(Right, Front));
+    }
+
+    glm::vec3 getMovePosition(glm::vec3 pos, glm::vec3 dir, float amount, std::function<bool(const glm::vec3)> isPositionOccupied, glm::ivec3 gridSize) {
+        dir = glm::normalize(dir);
+
+        glm::ivec3 offsets[] = {
+            glm::ivec3(1,  1,  1),
+            glm::ivec3(1,  1, -1),
+            glm::ivec3(1, -1,  1),
+            glm::ivec3(1, -1, -1),
+            glm::ivec3(-1,  1,  1),
+            glm::ivec3(-1,  1, -1),
+            glm::ivec3(-1, -1,  1),
+            glm::ivec3(-1, -1, -1)
+        };
+
+        glm::ivec3 sides[] = {
+            glm::ivec3(1,  0,  0),
+            glm::ivec3(0,  1,  0),
+            glm::ivec3(0,  0,  1),
+            glm::ivec3(-1,  0,  0),
+            glm::ivec3(0, -1,  0),
+            glm::ivec3(0,  0, -1),
+        };
+
+        glm::vec3 wallOffset(0.0f);
+
+        while (dir != glm::vec3(0.0f) && amount > 0.0f)
+        {
+            util::RayHit minHit = { false, 1000.0f, glm::ivec3(0) };
+            glm::ivec3 hitNormal;
+            glm::ivec3 moveSign = glm::sign(dir);
+
+            for (glm::ivec3 side : sides) {
+                if (moveSign * abs(side) != side) continue;
+
+                for (glm::ivec3 offset : offsets)
+                {
+                    if (offset * abs(side) != side) continue;
+
+                    //if (abs(moveSign) == glm::ivec3(1, 0, 0) || abs(moveSign) == glm::ivec3(0, 1, 0) || abs(moveSign) == glm::ivec3(0, 0, 1))
+                    offset = glm::mix(offset, side, 0.8);
+
+                    glm::vec3 origin = pos + glm::vec3(offset) * colliderHalfWidth;
+                    util::RayHit hit = util::rayCast(origin, dir, isPositionOccupied, 0.125f, gridSize, amount);
+                    if (hit.hit && hit.dist < minHit.dist) {
+                        minHit = hit;
+                        hitNormal = -side;
+                    }
+                }
+            }
+
+            if (minHit.hit && minHit.dist >= 0.0f) {
+                pos += dir * minHit.dist + glm::vec3(hitNormal) * 0.0000f;
+
+                //std::cout << hitNormal.x << ", " << hitNormal.y << ", " << hitNormal.z << "\n";
+
+                amount -= minHit.dist;
+                dir *= glm::ivec3(1) - abs(minHit.normal);
+                amount *= glm::length(dir);
+            }
+            else {
+                pos += dir * amount;
+                amount = 0.0f;
+            }
+        }
+
+        return pos;
     }
 };
 #endif
