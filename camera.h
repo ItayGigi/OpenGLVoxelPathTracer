@@ -44,7 +44,7 @@ public:
     float yVel = 0.0f;
     float gravityScale = 2.0f;
     float jumpForce = 1.0f;
-    bool isGrounded = false;
+    bool isGrounded = false, isHeadStuck = false;
 
     // constructor with vectors
     Camera(glm::vec3 position = glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f), float yaw = YAW, float pitch = PITCH) : Front(glm::vec3(0.0f, 0.0f, -1.0f)), MovementSpeed(SPEED), MouseSensitivity(SENSITIVITY)
@@ -172,10 +172,17 @@ public:
             isPositionOccupied(Position + glm::vec3(0.7f, -1.001f, -0.7f) * colliderHalfWidth) ||
             isPositionOccupied(Position + glm::vec3(-0.7f, -1.001f, -0.7f) * colliderHalfWidth);
 
-        if (!isGrounded && nowGrounded) {
+        bool nowHitHead = 
+            isPositionOccupied(Position + glm::vec3(0.7f, 1.001f, 0.7f) * colliderHalfWidth) ||
+            isPositionOccupied(Position + glm::vec3(-0.7f, 1.001f, 0.7f) * colliderHalfWidth) ||
+            isPositionOccupied(Position + glm::vec3(0.7f, 1.001f, -0.7f) * colliderHalfWidth) ||
+            isPositionOccupied(Position + glm::vec3(-0.7f, 1.001f, -0.7f) * colliderHalfWidth);
+
+        if ((!isGrounded && nowGrounded) || (!isHeadStuck && nowHitHead)) {
             yVel = 0.0f;
         }
         isGrounded = nowGrounded;
+        isHeadStuck = nowHitHead;
     }
 
     // processes input received from a mouse input system. Expects the offset value in both the x and y direction.
