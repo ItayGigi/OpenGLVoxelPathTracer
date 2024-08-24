@@ -321,12 +321,14 @@ struct SamplePoint{
 	float dist;
 	float history;
 	vec3 color;
+	float accuracy;
 };
 
 SamplePoint FindBestSample(GridHit hit, Ray ray){
-	if (!hit.hit) return SamplePoint(100., 0., vec3(0.));
+	if (!hit.hit) return SamplePoint(100., 0., vec3(0.), 0.);
 
 	vec3 hitPos = CamPosition + hit.dist * ray.dir;
+
 	vec3 normalPlane = vec3(1.) - abs(hit.normal);
 
 	float bestDist = 100.;
@@ -347,7 +349,15 @@ SamplePoint FindBestSample(GridHit hit, Ray ray){
 			bestCoord = currCoord;
 		}
 	}
-	return SamplePoint(bestDist, texelFetch(HistoryTex, ivec2(bestCoord*Resolution), 0).r, texture(LastFrameTex, bestCoord).rgb);
+
+	float accuracy = 1.;
+
+	vec2 lastScreenPos = WorldToLastScreenCoord(hitPos);
+	if (min(max(lastScreenPos, vec2(-1.)), vec2(1.)) != lastScreenPos) accuracy = pow(hit.mat.roughness, 5.);
+
+	if (bestDist > 0.1) accuracy = 0.;
+
+	return SamplePoint(bestDist, texelFetch(HistoryTex, ivec2(bestCoord*Resolution), 0).r, texture(LastFrameTex, bestCoord).rgb, accuracy);
 }
 
 void main()
@@ -380,14 +390,17 @@ void main()
 	// spatiotemporal denoisification
 	SamplePoint sample = FindBestSample(firstHit, firstRay);
 
-	float historyScale = 1. - sample.dist*1.5;
+	float historyScale = (1. - sample.dist*1.5) * sample.accuracy;
 	if (LastCamPosition != CamPosition) historyScale *= pow(firstHit.mat.roughness, 0.15);
-	if (sample.dist > 0.1) historyScale = 0.;
+	//if (sample.dist > 0.1) historyScale = 0.;
 
 	FragColor = vec3(historyScale);
 	//return;
 
 	FragHistory = sample.history * historyScale + 1.;
+
+	if (LastCamPosition != CamPosition) FragHistory = min(FragHistory, 1. + firstHit.mat.roughness * 200.);
+
 	FragDepth = firstHit.dist;
 	FragNormal = firstHit.normal;
 
