@@ -37,6 +37,8 @@ bool isPositionOccupied(const glm::vec3 pos);
 // window
 GLFWwindow* window;
 int windowWidth = 1000, windowHeight = 700;
+bool isMouseEnabled = true;
+bool doNextFocus = false;
 
 // camera
 Camera camera;
@@ -99,8 +101,6 @@ int main() {
 	glfwSetCursorPosCallback(window, mouse_callback);
 	glfwSetScrollCallback(window, scroll_callback);
 	glfwSwapInterval(VSYNC);
-
-	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
 	// initialize glad
 	if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
@@ -267,6 +267,12 @@ void processInput(GLFWwindow* window)
 	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
 		glfwSetWindowShouldClose(window, true);
 
+	if (glfwGetKey(window, GLFW_KEY_LEFT_ALT) == GLFW_PRESS) {
+		glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+		isMouseEnabled = true;
+		doNextFocus = true;
+	}
+
 	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
 		camera.ProcessKeyboard(FORWARD, deltaTime, &isPositionOccupied, brickMap->size * 8);
 	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
@@ -313,7 +319,7 @@ void createDebugImGuiWindow() {
 	ImGui::SetNextWindowPos({ 0, 0 });
 
 	ImGui::Begin("Debug Window", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
-
+	
 	lastFrameTimes.push(deltaTime);
 	frameTimesSum += deltaTime;
 
@@ -329,6 +335,17 @@ void createDebugImGuiWindow() {
 	}
 
 	ImGui::Text("Position: %.2f, %.2f, %.2f", camera.Position.x, camera.Position.y, camera.Position.z);
+
+	if (doNextFocus) {
+		ImGui::SetWindowFocus();
+		doNextFocus = false;
+	}
+
+	if (!ImGui::IsWindowFocused() && isMouseEnabled) {
+		glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+		isMouseEnabled = false;
+	}
+
 	ImGui::End();
 }
 
