@@ -336,6 +336,8 @@ void createDebugImGuiWindow() {
 
 	ImGui::Text("Position: %.2f, %.2f, %.2f", camera.Position.x, camera.Position.y, camera.Position.z);
 
+	ImGui::Checkbox("No Clip Fly", &camera.noClip);
+
 	if (doNextFocus) {
 		ImGui::SetWindowFocus();
 		doNextFocus = false;

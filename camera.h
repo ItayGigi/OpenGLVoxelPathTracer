@@ -45,6 +45,7 @@ public:
     float gravityScale = 3.0f;
     float jumpForce = 1.2f;
     bool isGrounded = false, isHeadBump = false;
+    bool noClip = false;
 
     // constructor with vectors
     Camera(glm::vec3 position = glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f), float yaw = YAW, float pitch = PITCH) : Front(glm::vec3(0.0f, 0.0f, -1.0f)), MovementSpeed(SPEED), MouseSensitivity(SENSITIVITY)
@@ -72,6 +73,8 @@ public:
     }
 
     void Update(float deltaTime, std::function<bool(const glm::vec3)> isPositionOccupied, glm::ivec3 gridSize) {
+        if (noClip) return;
+
         if (!isGrounded) {
             yVel -= gravityScale * deltaTime;
         }
@@ -85,7 +88,6 @@ public:
     void ProcessKeyboard(Camera_Movement direction, float deltaTime, std::function<bool(const glm::vec3)> isPositionOccupied, glm::ivec3 gridSize)
     {
         float moveAmount = MovementSpeed * deltaTime;
-        glm::vec3 movement(0.0f);
 
         if (direction == FORWARD)
             Move(glm::normalize(glm::cross(Right, WorldUp)), moveAmount, isPositionOccupied, gridSize);
@@ -95,14 +97,24 @@ public:
             Move(-Right, moveAmount, isPositionOccupied, gridSize);
         if (direction == RIGHT)
             Move(Right, moveAmount, isPositionOccupied, gridSize);
-        if (direction == UP && isGrounded)
+        if (!noClip && direction == UP && isGrounded)
             yVel = jumpForce;
-        //if (direction == DOWN)
-            //movement = -WorldUp;
+
+        if (!noClip) return;
+
+        if (direction == DOWN)
+            Move(-WorldUp, moveAmount, isPositionOccupied, gridSize);
+        if (direction == UP)
+            Move(WorldUp, moveAmount, isPositionOccupied, gridSize);
     }
 
     void Move(glm::vec3 dir, float amount, std::function<bool(const glm::vec3)> isPositionOccupied, glm::ivec3 gridSize)
     {
+        if (noClip) {
+            Position += normalize(dir) * amount;
+            return;
+        }
+
         glm::vec3 newPos = getMovePosition(Position, dir, amount, isPositionOccupied, gridSize);
         while (isPositionOccupied(newPos)) {
             amount -= 0.01f;
