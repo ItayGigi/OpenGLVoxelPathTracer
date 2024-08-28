@@ -20,11 +20,11 @@ vec3 ACES(const vec3 x) {
 
 vec4 averageSample(sampler2D tex, ivec2 loc){
 	return
-		texelFetch(tex, loc, 0)*0.6 +
-		texelFetch(tex, loc + ivec2(1, 0), 0)*0.1 +
-		texelFetch(tex, loc + ivec2(-1, 0), 0)*0.1 +
-		texelFetch(tex, loc + ivec2(0, 1), 0)*0.1 +
-		texelFetch(tex, loc + ivec2(0, -1), 0)*0.1;
+		texelFetch(tex, loc, 0)*0.4 +
+		texelFetch(tex, loc + ivec2(1, 0), 0)*0.15 +
+		texelFetch(tex, loc + ivec2(-1, 0), 0)*0.15 +
+		texelFetch(tex, loc + ivec2(0, 1), 0)*0.15 +
+		texelFetch(tex, loc + ivec2(0, -1), 0)*0.15;
 }
 
 void main()
@@ -41,6 +41,8 @@ void main()
 	color = pow(color, vec3(1.0/2.2)); // gamma correction
 	FragColor = color;
 	
-	//FragColor = texture(Texture, TexCoord*0.5+0.5).rgb;;
+	//FragColor = averageSample(AlbedoTex, pixelLoc).rgb;
+
+	//FragColor = texture(Texture, TexCoord*0.5+0.5).rgb;
 	return;
 }

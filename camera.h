@@ -45,7 +45,7 @@ public:
     float gravityScale = 3.0f;
     float jumpForce = 1.2f;
     bool isGrounded = false, isHeadBump = false;
-    bool noClip = false;
+    bool noClip = true;
 
     // constructor with vectors
     Camera(glm::vec3 position = glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f), float yaw = YAW, float pitch = PITCH) : Front(glm::vec3(0.0f, 0.0f, -1.0f)), MovementSpeed(SPEED), MouseSensitivity(SENSITIVITY)

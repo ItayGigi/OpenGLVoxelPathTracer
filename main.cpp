@@ -49,8 +49,9 @@ float lastY = windowHeight / 2.0f;
 bool firstMouse = true;
 
 // scene
-const char* brickPaths[3] = { "bricks/frame.vox", "bricks/chair.vox", "bricks/light.vox" };
-const char* scenePath = "menger.vox";
+const char* brickPaths[3] = { "bricks/block.vox", "bricks/light.vox", "bricks/light.vox" };
+//const char* brickPaths[6] = { "bricks/lum/leaves.vox", "bricks/lum/light.vox", "bricks/lum/light.vox", "bricks/lum/leaves.vox", "bricks/lum/iron.vox", "bricks/lum/light.vox" };
+const char* scenePath = "dragon.vox";
 
 std::unique_ptr<BrickMap> brickMap;
 std::vector<std::unique_ptr<Brick>> bricks;
@@ -338,6 +339,8 @@ void createDebugImGuiWindow() {
 
 	ImGui::Checkbox("No Clip Fly", &camera.noClip);
 
+	ImGui::Text("Occupied: %d", isPositionOccupied(camera.Position));
+
 	if (doNextFocus) {
 		ImGui::SetWindowFocus();
 		doNextFocus = false;
@@ -475,7 +478,7 @@ bool loadScene(Shader shader, const char* brickmapPath, const char* brickNames[]
 		if (!brick->data) return false; // failed to load brick
 
 		// assign brick data
-		glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, i, BRICK_SIZE, BRICK_SIZE * BRICK_SIZE / 8, 1, GL_RED_INTEGER, GL_UNSIGNED_INT, brick->data);
+		glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, i, BRICK_SIZE * BRICK_SIZE / 8, BRICK_SIZE, 1, GL_RED_INTEGER, GL_UNSIGNED_INT, brick->data);
 
 		for (int j = 1; j < brick->matCount; j++) // load all brick's materials
 		{
@@ -514,6 +517,8 @@ bool isPositionOccupied(const glm::vec3 pos) {
 	
 	if (brickID == 0) return false;
 
-	unsigned int voxelMat = (bricks[brickID - 1]->data[((int(pos.z * 8.0f) % 8) * 8 + (int(pos.x * 8.0f) % 8))] >> ((int(pos.y * 8.0f) % 8) * 4)) & 0xFu;
+	unsigned int x = int(pos.x * BRICK_SIZE) % BRICK_SIZE, y = int(pos.y * BRICK_SIZE) % BRICK_SIZE, z = int(pos.z * BRICK_SIZE) % BRICK_SIZE;
+
+	unsigned int voxelMat = (bricks[brickID - 1]->data[z * BRICK_SIZE + x * BRICK_SIZE / 8 + y / 8] >> ((y % 8) * 4)) & 0xFu;
 	return voxelMat != 0;
 }

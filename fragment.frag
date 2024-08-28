@@ -84,8 +84,8 @@ uint GetBrickMapCell(ivec3 loc){
 }
 
 uint GetBrickCell(int brick, ivec3 loc){
-	uint row = texelFetch(BricksTex, ivec3(loc.x, loc.z, brick-1), 0).r;
-	return (row >> loc.y*4) & 0xFu;
+	uint row = texelFetch(BricksTex, ivec3(loc.x*BRICK_RES/8 + loc.y/8, loc.z, brick-1), 0).r;
+	return (row >> (loc.y % 8)*4) & 0xFu;
 }
 
 Material GetMaterial(int brickIndex, int matIndex){
@@ -372,13 +372,22 @@ void main()
 
 	float aspect = float(Resolution.x)/float(Resolution.y);
 
-	vec3 sumColor = vec3(0.);
 	vec3 localNearPlane = vec3(TexCoord.x*aspect, TexCoord.y, 1.5);
 
 	vec3 firstDir = normalize((CamRotation * vec4(localNearPlane, 0.)).xyz);
 	Ray firstRay = Ray(CamPosition, firstDir, 1.0/firstDir);
 	GridHit firstHit = RaySceneIntersection(firstRay, vec3(0.), 1., int(MapSize.x + MapSize.y + MapSize.z));
 
+	FragDepth = firstHit.dist;
+	FragNormal = firstHit.normal;
+
+	if (!firstHit.hit){
+		FragColor = vec3(1.);
+		FragAlbedo = EnvironmentColor;
+		return;
+	}
+
+	vec3 sumColor = vec3(0.);
 	for (int s = 0; s < SAMPLES; s++) {
 		vec3 offset =  vec3(2.*rand2()-1., 0.)/Resolution.y; // for anti aliasing
 
@@ -394,15 +403,12 @@ void main()
 	if (LastCamPosition != CamPosition) historyScale *= pow(firstHit.mat.roughness, 0.15);
 	//if (sample.dist > 0.1) historyScale = 0.;
 
-	FragColor = vec3(historyScale);
+	//FragColor = vec3(historyScale);
 	//return;
 
 	FragHistory = sample.history * historyScale + 1.;
 
 	if (LastCamPosition != CamPosition) FragHistory = min(FragHistory, 1. + firstHit.mat.roughness * 200.);
-
-	FragDepth = firstHit.dist;
-	FragNormal = firstHit.normal;
 
 	if (firstHit.hit) FragAlbedo = firstHit.mat.color;
 	else FragAlbedo = vec3(1.);
