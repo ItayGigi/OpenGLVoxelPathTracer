@@ -88,6 +88,7 @@ public:
 
 		env_color = glm::vec3(scene->palette.color[255].r, scene->palette.color[255].g, scene->palette.color[255].b) * scene->materials.matl[255].emit * (float)pow(10, scene->materials.matl[255].flux) / 255.0f;
 
+		// calculate saved camera position from file
 		ogt_vox_cam voxCam = scene->cameras[0];
 		glm::vec3 angles(voxCam.angle[0], -voxCam.angle[1], voxCam.angle[2]);
 		glm::vec3 camFront(
@@ -152,9 +153,9 @@ public:
 				ogt_vox_matl ogt_material = scene->materials.matl[voxel_data[i]];
 
 				mats[matCount] = Material(
-					(unsigned int)(ogt_color.r) << 16 | (unsigned int)(ogt_color.g) << 8 | (unsigned int)(ogt_color.b),
-					ogt_material.emit * 100.0f * pow(10, ogt_material.flux),
-					ogt_material.rough * 0xFF
+					(unsigned int)(ogt_color.r) << 16 | (unsigned int)(ogt_color.g) << 8 | (unsigned int)(ogt_color.b), // color
+					ogt_material.emit * 100.0f * pow(10, ogt_material.flux), // emission
+					ogt_material.rough * 0xFF // roughness
 				);
 
 				pallet_to_my_mat[voxel_data[i]] = matCount;

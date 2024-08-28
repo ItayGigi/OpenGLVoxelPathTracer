@@ -50,7 +50,7 @@ bool firstMouse = true;
 
 // scene
 const char* brickPaths[3] = { "bricks/frame.vox", "bricks/chair.vox", "bricks/light.vox" };
-const char* scenePath = "bigmenger.vox";
+const char* scenePath = "menger.vox";
 
 std::unique_ptr<BrickMap> brickMap;
 std::vector<std::unique_ptr<Brick>> bricks;
@@ -158,8 +158,6 @@ int main() {
 
 		if (camera.Position != lastCamera.Position || camera.Front != lastCamera.Front) {
 			framesSinceLastMoved = 0;
-
-			//std::cout << int(camera.Position.x * 8.0f) % 8 << ", " << int(camera.Position.y * 8.0f) % 8 << ", " << int(camera.Position.z * 8.0f) % 8 << " - " << isPositionOccupied(camera.Position.x, camera.Position.y, camera.Position.z) << "\n";
 		}
 
 		glfwPollEvents();
@@ -273,18 +271,20 @@ void processInput(GLFWwindow* window)
 		doNextFocus = true;
 	}
 
+	glm::ivec3 mapSize = brickMap->size * 8;
+
 	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-		camera.ProcessKeyboard(FORWARD, deltaTime, &isPositionOccupied, brickMap->size * 8);
+		camera.ProcessKeyboard(FORWARD, deltaTime, &isPositionOccupied, mapSize);
 	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-		camera.ProcessKeyboard(BACKWARD, deltaTime, &isPositionOccupied, brickMap->size * 8);
+		camera.ProcessKeyboard(BACKWARD, deltaTime, &isPositionOccupied, mapSize);
 	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-		camera.ProcessKeyboard(LEFT, deltaTime, &isPositionOccupied, brickMap->size * 8);
+		camera.ProcessKeyboard(LEFT, deltaTime, &isPositionOccupied, mapSize);
 	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-		camera.ProcessKeyboard(RIGHT, deltaTime, &isPositionOccupied, brickMap->size * 8);
+		camera.ProcessKeyboard(RIGHT, deltaTime, &isPositionOccupied, mapSize);
 	if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
-		camera.ProcessKeyboard(UP, deltaTime, &isPositionOccupied, brickMap->size * 8);
+		camera.ProcessKeyboard(UP, deltaTime, &isPositionOccupied, mapSize);
 	if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS)
-		camera.ProcessKeyboard(DOWN, deltaTime, &isPositionOccupied, brickMap->size * 8);
+		camera.ProcessKeyboard(DOWN, deltaTime, &isPositionOccupied, mapSize);
 }
 
 // glfw: whenever the mouse moves, this callback is called

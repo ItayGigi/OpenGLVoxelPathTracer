@@ -218,7 +218,6 @@ private:
                 {
                     if (offset * abs(side) != side) continue;
 
-                    //if (abs(moveSign) == glm::ivec3(1, 0, 0) || abs(moveSign) == glm::ivec3(0, 1, 0) || abs(moveSign) == glm::ivec3(0, 0, 1))
                     offset = glm::mix(offset, side, 0.8);
 
                     glm::vec3 origin = pos + glm::vec3(offset) * colliderHalfWidth;
@@ -232,8 +231,6 @@ private:
 
             if (minHit.hit && minHit.dist >= 0.0f) {
                 pos += dir * minHit.dist + glm::vec3(hitNormal) * 0.0000f;
-
-                //std::cout << hitNormal.x << ", " << hitNormal.y << ", " << hitNormal.z << "\n";
 
                 amount -= minHit.dist;
                 dir *= glm::ivec3(1) - abs(minHit.normal);
