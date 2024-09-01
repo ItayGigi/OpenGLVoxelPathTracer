@@ -382,8 +382,8 @@ void main()
 	FragNormal = firstHit.normal;
 
 	if (!firstHit.hit){
-		FragColor = vec3(1.);
-		FragAlbedo = EnvironmentColor;
+		FragAlbedo = vec3(EnvironmentColor);
+		FragEmission = -1.;
 		return;
 	}
 
@@ -416,5 +416,7 @@ void main()
 	FragEmission = firstHit.mat.emission;
 
 	FragColor = mix(sample.color, color, 1.0/(pow(FragHistory, 0.97)));
+
+	//FragColor = color;
 	return;
 }

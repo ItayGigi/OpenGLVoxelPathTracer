@@ -51,12 +51,12 @@ bool firstMouse = true;
 // scene
 const char* brickPaths[3] = { "bricks/block.vox", "bricks/light.vox", "bricks/light.vox" };
 //const char* brickPaths[6] = { "bricks/lum/leaves.vox", "bricks/lum/light.vox", "bricks/lum/light.vox", "bricks/lum/leaves.vox", "bricks/lum/iron.vox", "bricks/lum/light.vox" };
-const char* scenePath = "dragon.vox";
+const char* scenePath = "menger.vox";
 
 std::unique_ptr<BrickMap> brickMap;
 std::vector<std::unique_ptr<Brick>> bricks;
 
-//const char* bricks[8] = {
+//const char* brickPaths[8] = {
 //	"bricks/minecraft/white_concrete.vox",
 //	"bricks/minecraft/blue_wool.vox",
 //	"bricks/minecraft/light_blue_wool.vox",
