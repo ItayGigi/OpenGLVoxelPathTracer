@@ -82,6 +82,9 @@ int fpsAverageAmount = 150;
 unsigned int fbo1, fbo2;
 unsigned int bufferTextures1[6], bufferTextures2[6];
 
+const char* output_names[] = { "Composite", "Illumination", "Albedo", "Emission", "Normal", "Depth", "History"};
+int selected_output = 0;
+
 int main() {
 	// initialize glfw
 	glfwInit();
@@ -291,6 +294,11 @@ void processInput(GLFWwindow* window)
 // glfw: whenever the mouse moves, this callback is called
 void mouse_callback(GLFWwindow* window, double xposIn, double yposIn)
 {
+	if (isMouseEnabled) {
+		firstMouse = true;
+		return;
+	}
+
 	float xpos = static_cast<float>(xposIn);
 	float ypos = static_cast<float>(yposIn);
 
@@ -321,6 +329,16 @@ void createDebugImGuiWindow() {
 
 	ImGui::Begin("Debug Window", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
 	
+	if (doNextFocus) {
+		ImGui::SetWindowFocus();
+		doNextFocus = false;
+	}
+
+	if (!ImGui::IsWindowFocused(ImGuiFocusedFlags_::ImGuiFocusedFlags_RootAndChildWindows) && isMouseEnabled) {
+		glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+		isMouseEnabled = false;
+	}
+
 	lastFrameTimes.push(deltaTime);
 	frameTimesSum += deltaTime;
 
@@ -341,15 +359,7 @@ void createDebugImGuiWindow() {
 
 	ImGui::Text("Occupied: %d", isPositionOccupied(camera.Position));
 
-	if (doNextFocus) {
-		ImGui::SetWindowFocus();
-		doNextFocus = false;
-	}
-
-	if (!ImGui::IsWindowFocused() && isMouseEnabled) {
-		glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-		isMouseEnabled = false;
-	}
+	ImGui::Combo("Output", &selected_output, output_names, IM_ARRAYSIZE(output_names));
 
 	ImGui::End();
 }
@@ -421,10 +431,14 @@ void draw(Shader shader, Shader postShader, unsigned int VAO) {
 	postShader.use();
 
 	postShader.setUVec2("Resolution", windowWidth, windowHeight);
+	postShader.setInt("OutputNum", selected_output);
 
 	postShader.setTexture("Texture", bufferTextures1[ScreenTexture], 5 + ScreenTexture);
 	postShader.setTexture("AlbedoTex", bufferTextures1[AlbedoTexture], 5 + AlbedoTexture);
 	postShader.setTexture("EmissionTex", bufferTextures1[EmissionTexture], 5 + EmissionTexture);
+	postShader.setTexture("NormalTex", bufferTextures1[NormalTexture], 5 + NormalTexture);
+	postShader.setTexture("DepthTex", bufferTextures1[DepthTexture], 5 + DepthTexture);
+	postShader.setTexture("HistoryTex", bufferTextures1[HistoryTexture], 5 + HistoryTexture);
 
 	glBindVertexArray(VAO);
 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);

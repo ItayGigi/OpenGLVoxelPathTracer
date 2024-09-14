@@ -5,9 +5,15 @@ out vec3 FragColor;
 in vec2 TexCoord;
 
 uniform uvec2 Resolution;
+uniform int OutputNum;
+
 uniform sampler2D Texture;
 uniform sampler2D AlbedoTex;
 uniform sampler2D EmissionTex;
+uniform sampler2D HistoryTex;
+uniform isampler2D NormalTex;
+uniform sampler2D DepthTex;
+
 
 vec3 ACES(const vec3 x) {
 	const float a = 2.51;
@@ -31,16 +37,45 @@ void main()
 {
 	ivec2 pixelLoc = ivec2((TexCoord*0.5+0.5)*Resolution);
 
-	vec3 color = texelFetch(Texture, pixelLoc, 0).rgb;
-
-	float emission = texelFetch(EmissionTex, pixelLoc, 0).r;
 	vec3 albedo = averageSample(AlbedoTex, pixelLoc).rgb;
+
+	vec3 incomingLight = texelFetch(Texture, pixelLoc, 0).rgb;
+	float emission = texelFetch(EmissionTex, pixelLoc, 0).r;
+
+	switch(OutputNum){
+		case 0: // Composite
+		break;
+
+		case 1: // Illumination
+		FragColor = incomingLight;
+		return;
+
+		case 2: // Albedo
+		FragColor = albedo;
+		return;
+
+		case 3: // Emission
+		FragColor = vec3(emission);
+		return;
+
+		case 4: // Normal
+		FragColor = texelFetch(NormalTex, pixelLoc, 0).rgb;
+		return;
+
+		case 5: // Depth
+		FragColor = texelFetch(DepthTex, pixelLoc, 0).rrr/50.;
+		return;
+
+		case 6: // History
+		FragColor = texelFetch(HistoryTex, pixelLoc, 0).rrr/100.;
+		return;
+	}
 
 	if (emission == -1.) {
 		FragColor = albedo; // no hit
 	}
 	else {
-		FragColor = albedo * (color + emission);
+		FragColor = albedo * (incomingLight + emission);
 	}
 
 	FragColor = ACES(FragColor); // tonemapping
