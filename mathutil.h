@@ -34,11 +34,11 @@ namespace util {
 
 
 	RayHit rayCast(glm::vec3 origin, glm::vec3 dir, std::function<bool(glm::vec3)> isPositionOccupied, float voxelSize, glm::ivec3 gridSize, float limit) {
-		SlabIntersection boundHit = raySlabIntersection(origin, dir, glm::vec3(0.0f), glm::vec3(gridSize) * voxelSize);
-		if (!boundHit.hit) return { false, INFINITY, glm::ivec3(0) };
+		SlabIntersection bound_hit = raySlabIntersection(origin, dir, glm::vec3(0.0f), glm::vec3(gridSize) * voxelSize);
+		if (!bound_hit.hit) return { false, INFINITY, glm::ivec3(0) };
 
-		float tMin = boundHit.tmin;
-		float tMax = boundHit.tmax;
+		float tMin = bound_hit.tmin;
+		float tMax = bound_hit.tmax;
 
 		glm::vec3 ray_start = origin + dir * tMin;
 		if (tMin < 0.) ray_start = origin;
@@ -53,7 +53,7 @@ namespace util {
 		glm::vec3 t_delta = voxelSize / abs(dir);
 
 		float dist = glm::max(tMin, 0.0f);
-		glm::bvec3 mask = boundHit.mask;
+		glm::bvec3 mask = bound_hit.mask;
 
 		int iter = 0;
 		while (last_voxel != curr_voxel && iter++ < gridSize.x + gridSize.y + gridSize.z && dist < limit) {
