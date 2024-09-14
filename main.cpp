@@ -34,7 +34,7 @@ bool isPositionOccupied(const glm::vec3 pos);
 
 
 // constants
-const std::string	kScenePath = "menger.scene";
+const std::string	kScenePath = "map.scene";
 const std::string	kAssetsFolder = "assets/";
 const bool			kVSYNC = false;
 const char*			kOutputNames[] = { "Result", "Composite", "Illumination", "Albedo", "Emission", "Normal", "Depth", "History"};
@@ -118,15 +118,15 @@ int main() {
 	unsigned int VAO = createVAO();
 
 	Shader shader("vertex.vert", "fragment.frag");
-	Shader postProcessShader("vertex.vert", "postprocessing.frag");
+	Shader post_process_shader("vertex.vert", "postprocessing.frag");
 
 	// load scene
-	unsigned int sceneTex, bricksTex, matsTex;
-	if (!loadScene(shader, kScenePath, &sceneTex, &bricksTex, &matsTex)) {
+	unsigned int scene_tex, bricks_tex, mats_tex;
+	if (!loadScene(shader, kScenePath, &scene_tex, &bricks_tex, &mats_tex)) {
 		std::cerr << "failed to load scene. exiting" << std::endl;
-		glDeleteTextures(1, &sceneTex);
-		glDeleteTextures(1, &bricksTex);
-		glDeleteTextures(1, &matsTex);
+		glDeleteTextures(1, &scene_tex);
+		glDeleteTextures(1, &bricks_tex);
+		glDeleteTextures(1, &mats_tex);
 		glfwTerminate();
 		return -1;
 	}
@@ -140,9 +140,9 @@ int main() {
 	while (!glfwWindowShouldClose(window))
 	{
 		frame_count++;
-		float currentFrameTime = static_cast<float>(glfwGetTime());
-		delta_time = currentFrameTime - last_frame_time;
-		last_frame_time = currentFrameTime;
+		float current_frame_time = static_cast<float>(glfwGetTime());
+		delta_time = current_frame_time - last_frame_time;
+		last_frame_time = current_frame_time;
 
 		camera.Update(delta_time, &isPositionOccupied, brick_map->size * 8);
 
@@ -156,7 +156,7 @@ int main() {
 
 		createDebugImGuiWindow();
 
-		draw(shader, postProcessShader, VAO);
+		draw(shader, post_process_shader, VAO);
 
 		ImGui::Render();
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
@@ -164,9 +164,9 @@ int main() {
 		glfwSwapBuffers(window);
 	}
 
-	glDeleteTextures(1, &sceneTex);
-	glDeleteTextures(1, &bricksTex);
-	glDeleteTextures(1, &matsTex);
+	glDeleteTextures(1, &scene_tex);
+	glDeleteTextures(1, &bricks_tex);
+	glDeleteTextures(1, &mats_tex);
 	for (int i = 0; i < sizeof(buffer_textures1) / sizeof(unsigned int); i++) {
 		glDeleteTextures(1, &buffer_textures1[i]);
 		glDeleteTextures(1, &buffer_textures2[i]);
