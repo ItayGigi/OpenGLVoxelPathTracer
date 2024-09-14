@@ -6,6 +6,7 @@ in vec2 TexCoord;
 
 uniform uvec2 Resolution;
 uniform int OutputNum;
+uniform float Gamma;
 
 uniform sampler2D Texture;
 uniform sampler2D AlbedoTex;
@@ -43,30 +44,32 @@ void main()
 	float emission = texelFetch(EmissionTex, pixelLoc, 0).r;
 
 	switch(OutputNum){
-		case 0: // Composite
+		case 0: // Result
+		break;
+		case 1: // Composite
 		break;
 
-		case 1: // Illumination
+		case 2: // Illumination
 		FragColor = incomingLight;
 		return;
 
-		case 2: // Albedo
+		case 3: // Albedo
 		FragColor = albedo;
 		return;
 
-		case 3: // Emission
+		case 4: // Emission
 		FragColor = vec3(emission);
 		return;
 
-		case 4: // Normal
+		case 5: // Normal
 		FragColor = texelFetch(NormalTex, pixelLoc, 0).rgb;
 		return;
 
-		case 5: // Depth
+		case 6: // Depth
 		FragColor = texelFetch(DepthTex, pixelLoc, 0).rrr/50.;
 		return;
 
-		case 6: // History
+		case 7: // History
 		FragColor = texelFetch(HistoryTex, pixelLoc, 0).rrr/100.;
 		return;
 	}
@@ -78,11 +81,10 @@ void main()
 		FragColor = albedo * (incomingLight + emission);
 	}
 
-	FragColor = ACES(FragColor); // tonemapping
-	FragColor = pow(FragColor, vec3(1.0/2.2)); // gamma correction
-	
-	//FragColor = averageSample(AlbedoTex, pixelLoc).rgb;
+	if (OutputNum == 0)
+		FragColor = ACES(FragColor); // tonemapping
 
-	//FragColor = texture(Texture, TexCoord*0.5+0.5).rgb;
+	FragColor = pow(FragColor, vec3(1.0/Gamma)); // gamma correction
+
 	return;
 }

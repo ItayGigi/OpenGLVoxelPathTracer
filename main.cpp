@@ -1,9 +1,11 @@
-#include <iostream>
 #include <glad/glad.h> 
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <iostream>
+#include <fstream>
+#include <queue>
 #include "shader.h"
 #include "camera.h"
 #include "brick.h"
@@ -11,28 +13,33 @@
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
 
-#include <queue>
-
-#define VSYNC false
-
 enum BufferTexture {
-	ScreenTexture = 0,
-	HistoryTexture,
-	DepthTexture,
-	AlbedoTexture,
-	NormalTexture,
-	EmissionTexture,
+	SCREEN_TEXTURE = 0,
+	HISTORY_TEXTURE,
+	DEPTH_TEXTURE,
+	ALBEDO_TEXTURE,
+	NORMAL_TEXTURE,
+	EMISSION_TEXTURE,
 };
 
 void framebufferSizeCallback(GLFWwindow* window, int width, int height);
-void mouseCallback(GLFWwindow* window, double xpos, double ypos);
-void scrollCallback(GLFWwindow* window, double xoffset, double yoffset);
+void mouseCallback(GLFWwindow* window, double x_pos, double y_pos);
+void scrollCallback(GLFWwindow* window, double x_offset, double y_offset);
 void processInput(GLFWwindow* window);
 void createDebugImGuiWindow();
 unsigned int createVAO();
 void draw(Shader shader, Shader postShader, unsigned int VAO);
-bool loadScene(Shader shader, const char* brickmapPath, const char* brickNames[], const unsigned int brickCount, unsigned int* mapTexture, unsigned int* bricksTexture, unsigned int* matsTexture);
+bool loadScene(Shader shader, const std::string scene_path, unsigned int* map_texture, unsigned int* bricks_texture, unsigned int* mats_texture);
 bool isPositionOccupied(const glm::vec3 pos);
+
+
+// constants
+const std::string	kScenePath = "menger.scene";
+const std::string	kAssetsFolder = "assets/";
+const bool			kVSYNC = false;
+const char*			kOutputNames[] = { "Result", "Composite", "Illumination", "Albedo", "Emission", "Normal", "Depth", "History"};
+const unsigned int	kFPSAverageAmount = 150;
+
 
 // window
 GLFWwindow* window;
@@ -48,24 +55,8 @@ float last_mouse_x = window_width / 2.0f;
 float last_mouse_y = window_height / 2.0f;
 bool first_mouse = true;
 
-// scene
-const char* brick_paths[3] = { "bricks/block.vox", "bricks/light.vox", "bricks/light.vox" };
-//const char* brickPaths[6] = { "bricks/lum/leaves.vox", "bricks/lum/light.vox", "bricks/lum/light.vox", "bricks/lum/leaves.vox", "bricks/lum/iron.vox", "bricks/lum/light.vox" };
-const char* scene_path = "menger.vox";
-
 std::unique_ptr<BrickMap> brick_map;
 std::vector<std::unique_ptr<Brick>> bricks;
-
-//const char* brickPaths[8] = {
-//	"bricks/minecraft/white_concrete.vox",
-//	"bricks/minecraft/blue_wool.vox",
-//	"bricks/minecraft/light_blue_wool.vox",
-//	"bricks/minecraft/lime_wool.vox",
-//	"bricks/minecraft/orange_wool.vox",
-//	"bricks/minecraft/red_wool.vox",
-//	"bricks/minecraft/yellow_wool.vox",
-//	"bricks/minecraft/light.vox" };
-//const char* scenePath = "minecraft.vox";
 
 // timing
 float delta_time = 0.0f;	// time between current frame and last frame
@@ -75,14 +66,13 @@ unsigned int frame_count = 0;
 // fps
 float frame_times_sum = 0.0f;
 std::queue<float> last_frame_times;
-int fps_average_amount = 150;
 
 // frame buffers
 unsigned int fbo1, fbo2;
 unsigned int buffer_textures1[6], buffer_textures2[6];
 
-const char* output_names[] = { "Composite", "Illumination", "Albedo", "Emission", "Normal", "Depth", "History"};
 int selected_output = 0;
+float gamma = 2.2f;
 
 int main() {
 	// initialize glfw
@@ -103,7 +93,7 @@ int main() {
 	glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
 	glfwSetCursorPosCallback(window, mouseCallback);
 	glfwSetScrollCallback(window, scrollCallback);
-	glfwSwapInterval(VSYNC);
+	glfwSwapInterval(kVSYNC);
 
 	// initialize glad
 	if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
@@ -132,7 +122,7 @@ int main() {
 
 	// load scene
 	unsigned int sceneTex, bricksTex, matsTex;
-	if (!loadScene(shader, scene_path, brick_paths, sizeof(brick_paths) / sizeof(char*), &sceneTex, &bricksTex, &matsTex)) {
+	if (!loadScene(shader, kScenePath, &sceneTex, &bricksTex, &matsTex)) {
 		std::cerr << "failed to load scene. exiting" << std::endl;
 		glDeleteTextures(1, &sceneTex);
 		glDeleteTextures(1, &bricksTex);
@@ -221,28 +211,28 @@ void framebufferSizeCallback(GLFWwindow* window, int width, int height)
 			glBindTexture(GL_TEXTURE_2D, 0);
 		}
 
-		glActiveTexture(GL_TEXTURE0 + 5 + ScreenTexture);
-		glBindTexture(GL_TEXTURE_2D, buffer_textures1[ScreenTexture]);
+		glActiveTexture(GL_TEXTURE0 + 5 + SCREEN_TEXTURE);
+		glBindTexture(GL_TEXTURE_2D, buffer_textures1[SCREEN_TEXTURE]);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, window_width, window_height, 0, GL_RGB, GL_FLOAT, NULL);
 
-		glActiveTexture(GL_TEXTURE0 + 5 + HistoryTexture);
-		glBindTexture(GL_TEXTURE_2D, buffer_textures1[HistoryTexture]);
+		glActiveTexture(GL_TEXTURE0 + 5 + HISTORY_TEXTURE);
+		glBindTexture(GL_TEXTURE_2D, buffer_textures1[HISTORY_TEXTURE]);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, window_width, window_height, 0, GL_RED, GL_FLOAT, NULL);
 
-		glActiveTexture(GL_TEXTURE0 + 5 + DepthTexture);
-		glBindTexture(GL_TEXTURE_2D, buffer_textures1[DepthTexture]);
+		glActiveTexture(GL_TEXTURE0 + 5 + DEPTH_TEXTURE);
+		glBindTexture(GL_TEXTURE_2D, buffer_textures1[DEPTH_TEXTURE]);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, window_width, window_height, 0, GL_RED, GL_FLOAT, NULL);
 
-		glActiveTexture(GL_TEXTURE0 + 5 + AlbedoTexture);
-		glBindTexture(GL_TEXTURE_2D, buffer_textures1[AlbedoTexture]);
+		glActiveTexture(GL_TEXTURE0 + 5 + ALBEDO_TEXTURE);
+		glBindTexture(GL_TEXTURE_2D, buffer_textures1[ALBEDO_TEXTURE]);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, window_width, window_height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
 
-		glActiveTexture(GL_TEXTURE0 + 5 + NormalTexture);
-		glBindTexture(GL_TEXTURE_2D, buffer_textures1[NormalTexture]);
+		glActiveTexture(GL_TEXTURE0 + 5 + NORMAL_TEXTURE);
+		glBindTexture(GL_TEXTURE_2D, buffer_textures1[NORMAL_TEXTURE]);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8I, window_width, window_height, 0, GL_RGB_INTEGER, GL_INT, NULL);
 
-		glActiveTexture(GL_TEXTURE0 + 5 + EmissionTexture);
-		glBindTexture(GL_TEXTURE_2D, buffer_textures1[EmissionTexture]);
+		glActiveTexture(GL_TEXTURE0 + 5 + EMISSION_TEXTURE);
+		glBindTexture(GL_TEXTURE_2D, buffer_textures1[EMISSION_TEXTURE]);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, window_width, window_height, 0, GL_RED, GL_FLOAT, NULL);
 
 		if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
@@ -336,12 +326,12 @@ void createDebugImGuiWindow() {
 	last_frame_times.push(delta_time);
 	frame_times_sum += delta_time;
 
-	if (frame_count > fps_average_amount) {
+	if (frame_count > kFPSAverageAmount) {
 		frame_times_sum -= last_frame_times.front();
 		last_frame_times.pop();
 
-		float average = fps_average_amount / frame_times_sum;
-		ImGui::Text("FPS = %d", int(fps_average_amount / frame_times_sum));
+		float average = kFPSAverageAmount / frame_times_sum;
+		ImGui::Text("FPS = %d", int(kFPSAverageAmount / frame_times_sum));
 	}
 	else {
 		ImGui::Text("FPS = ...");
@@ -351,9 +341,10 @@ void createDebugImGuiWindow() {
 
 	ImGui::Checkbox("No Clip Fly", &camera.no_clip);
 
-	ImGui::Text("Occupied: %d", isPositionOccupied(camera.position));
-
-	ImGui::Combo("Output", &selected_output, output_names, IM_ARRAYSIZE(output_names));
+	if (ImGui::CollapsingHeader("Visuals")) {
+		ImGui::SliderFloat("Gamma", &gamma, 1.0f, 5.0f);
+		ImGui::Combo("Output", &selected_output, kOutputNames, IM_ARRAYSIZE(kOutputNames));
+	}
 
 	ImGui::End();
 }
@@ -413,10 +404,10 @@ void draw(Shader shader, Shader post_shader, unsigned int vao) {
 
 	shader.setUInt("FrameCount", frame_count);
 
-	shader.setTexture("LastFrameTex", buffer_textures2[ScreenTexture], 5 + ScreenTexture);
-	shader.setTexture("HistoryTex", buffer_textures2[HistoryTexture], 5 + HistoryTexture);
-	shader.setTexture("LastDepthTex", buffer_textures2[DepthTexture], 5 + DepthTexture);
-	shader.setTexture("LastNormalTex", buffer_textures2[NormalTexture], 5 + NormalTexture);
+	shader.setTexture("LastFrameTex", buffer_textures2[SCREEN_TEXTURE], 5 + SCREEN_TEXTURE);
+	shader.setTexture("HistoryTex", buffer_textures2[HISTORY_TEXTURE], 5 + HISTORY_TEXTURE);
+	shader.setTexture("LastDepthTex", buffer_textures2[DEPTH_TEXTURE], 5 + DEPTH_TEXTURE);
+	shader.setTexture("LastNormalTex", buffer_textures2[NORMAL_TEXTURE], 5 + NORMAL_TEXTURE);
 
 	glBindVertexArray(vao);
 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
@@ -426,13 +417,14 @@ void draw(Shader shader, Shader post_shader, unsigned int vao) {
 	
 	post_shader.setUVec2("Resolution", window_width, window_height);
 	post_shader.setInt("OutputNum", selected_output);
+	post_shader.setFloat("Gamma", gamma);
 	
-	post_shader.setTexture("Texture", buffer_textures1[ScreenTexture], 5 + ScreenTexture);
-	post_shader.setTexture("AlbedoTex", buffer_textures1[AlbedoTexture], 5 + AlbedoTexture);
-	post_shader.setTexture("EmissionTex", buffer_textures1[EmissionTexture], 5 + EmissionTexture);
-	post_shader.setTexture("NormalTex", buffer_textures1[NormalTexture], 5 + NormalTexture);
-	post_shader.setTexture("DepthTex", buffer_textures1[DepthTexture], 5 + DepthTexture);
-	post_shader.setTexture("HistoryTex", buffer_textures1[HistoryTexture], 5 + HistoryTexture);
+	post_shader.setTexture("Texture", buffer_textures1[SCREEN_TEXTURE], 5 + SCREEN_TEXTURE);
+	post_shader.setTexture("AlbedoTex", buffer_textures1[ALBEDO_TEXTURE], 5 + ALBEDO_TEXTURE);
+	post_shader.setTexture("EmissionTex", buffer_textures1[EMISSION_TEXTURE], 5 + EMISSION_TEXTURE);
+	post_shader.setTexture("NormalTex", buffer_textures1[NORMAL_TEXTURE], 5 + NORMAL_TEXTURE);
+	post_shader.setTexture("DepthTex", buffer_textures1[DEPTH_TEXTURE], 5 + DEPTH_TEXTURE);
+	post_shader.setTexture("HistoryTex", buffer_textures1[HISTORY_TEXTURE], 5 + HISTORY_TEXTURE);
 
 	glBindVertexArray(vao);
 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
@@ -443,11 +435,20 @@ void draw(Shader shader, Shader post_shader, unsigned int vao) {
 	last_camera = camera;
 }
 
-bool loadScene(Shader shader, const char* brickmap_path, const char* brick_names[], const unsigned int brick_count, unsigned int* map_texture, unsigned int* bricks_texture, unsigned int* mats_texture) {
+bool loadScene(Shader shader, const std::string scene_path, unsigned int* map_texture, unsigned int* bricks_texture, unsigned int* mats_texture) {
+	std::ifstream scene_file(kAssetsFolder + scene_path);
+	
 	// map
-	brick_map = std::unique_ptr<BrickMap>(new BrickMap((std::string("assets/") + brickmap_path).c_str()));
+	std::string brickmap_path;
+	scene_file >> brickmap_path;
+	brick_map = std::unique_ptr<BrickMap>(new BrickMap((kAssetsFolder + brickmap_path).c_str()));
 	if (brick_map->data.empty()) return false; // failed to load brickmap
 
+	std::vector<std::string> brick_paths;
+	std::string next_brick_path;
+	while (scene_file >> next_brick_path)
+		brick_paths.push_back(next_brick_path);
+	
 	shader.use();
 	shader.setUVec3("MapSize", brick_map->size.x, brick_map->size.y, brick_map->size.z);
 
@@ -468,18 +469,18 @@ bool loadScene(Shader shader, const char* brickmap_path, const char* brick_names
 	glBindTexture(GL_TEXTURE_2D_ARRAY, *bricks_texture);
 
 	// allocate bricks texture array
-	glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_R32UI, BRICK_SIZE * BRICK_SIZE / 8, BRICK_SIZE, brick_count, 0, GL_RED_INTEGER, GL_UNSIGNED_INT, NULL);
+	glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_R32UI, BRICK_SIZE * BRICK_SIZE / 8, BRICK_SIZE, brick_paths.size(), 0, GL_RED_INTEGER, GL_UNSIGNED_INT, NULL);
 
 	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-	std::vector<uint32_t> mats_data(brick_count * 16 * 2);
+	std::vector<uint32_t> mats_data(brick_paths.size() * 16 * 2);
 
-	for (int i = 0; i < brick_count; i++)
+	for (int i = 0; i < brick_paths.size(); i++)
 	{
-		bricks.push_back(std::unique_ptr<Brick>(new Brick((std::string("assets/") + brick_names[i]).c_str())));
+		bricks.push_back(std::unique_ptr<Brick>(new Brick((kAssetsFolder + brick_paths[i]).c_str())));
 
 		Brick* brick = bricks.back().get();
 
@@ -501,7 +502,7 @@ bool loadScene(Shader shader, const char* brickmap_path, const char* brick_names
 	glGenTextures(1, mats_texture);
 	glActiveTexture(GL_TEXTURE0 + 2);
 	glBindTexture(GL_TEXTURE_2D, *mats_texture);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RG32UI, 16, brick_count, 0, GL_RG_INTEGER, GL_UNSIGNED_INT, mats_data.data());
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RG32UI, 16, brick_paths.size(), 0, GL_RG_INTEGER, GL_UNSIGNED_INT, mats_data.data());
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
