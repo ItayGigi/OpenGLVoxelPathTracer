@@ -1,5 +1,7 @@
 map.vox
 
+color
+
 bricks/block.vox
 bricks/chair.vox
 bricks/light.vox

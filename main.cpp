@@ -438,11 +438,25 @@ void draw(Shader shader, Shader post_shader, unsigned int vao) {
 bool loadScene(Shader shader, const std::string scene_path, unsigned int* map_texture, unsigned int* bricks_texture, unsigned int* mats_texture) {
 	std::ifstream scene_file(kAssetsFolder + scene_path);
 	
+	if (!scene_file) {
+		std::cout << "Scene file \'" << kAssetsFolder << scene_path << "\' not found.\n";
+		return false;
+	}
+
 	// map
 	std::string brickmap_path;
 	scene_file >> brickmap_path;
 	brick_map = std::unique_ptr<BrickMap>(new BrickMap((kAssetsFolder + brickmap_path).c_str()));
 	if (brick_map->data.empty()) return false; // failed to load brickmap
+
+	std::string sky_setting;
+	scene_file >> sky_setting;
+
+	if (sky_setting == "sky") brick_map->env_color = glm::vec3(-1);
+	else if (sky_setting != "color") {
+		std::cout << "Input sky setting \'" << sky_setting << "\' is invalid. Expected \'color\' or \'sky\'.\n";
+		return false;
+	}
 
 	std::vector<std::string> brick_paths;
 	std::string next_brick_path;

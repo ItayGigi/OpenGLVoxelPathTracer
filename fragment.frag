@@ -96,6 +96,15 @@ Material GetMaterial(int brickIndex, int matIndex){
 	return Material(color, roughness, emission);
 }
 
+vec3 GetSky(vec3 dir){
+	if (EnvironmentColor != vec3(-1)) return EnvironmentColor;
+	
+	vec3 sky = clamp(exp2(-dir.y/vec3(.35,.45,.6)), 0., 1.);
+	vec3 sun = clamp(pow(dot(normalize(vec3(1., 2., 1.)), dir), 200), 0., 1.) * vec3(1., 0.8, 0.4) * 70.;
+
+	return sky + sun;
+}
+
 vec4 TestBrick(int brick, vec2 coords){
 	if (coords.y > 0.) return vec4(GetBrickCell(brick, ivec3(int(fract(coords.x*4.+4.)*8.), int(coords.y*32.), int(coords.x * 4. + 4.)))/8.);
 	else if (coords.y > -1/4.) return vec4(int(fract(coords.x*4.+4.)*8.)/8., int(coords.y*32.+8.)/8., int(coords.x * 4. + 4.)/8., 1.);
@@ -239,7 +248,7 @@ vec3 Trace(Ray ray, GridHit firstHit){
 
 		if (!hitInfo.hit){
 			if (hitInfo.dist < 0.)
-				return incomingLight + rayColor * EnvironmentColor;
+				return incomingLight + rayColor * GetSky(ray.dir);
 			return vec3(0.);
 		}
 
@@ -382,7 +391,7 @@ void main()
 	FragNormal = firstHit.normal;
 
 	if (!firstHit.hit){
-		FragAlbedo = vec3(EnvironmentColor);
+		FragAlbedo = GetSky(firstDir);
 		FragEmission = -1.;
 		return;
 	}

@@ -38,7 +38,7 @@ void main()
 {
 	ivec2 pixelLoc = ivec2((TexCoord*0.5+0.5)*Resolution);
 
-	vec3 albedo = averageSample(AlbedoTex, pixelLoc).rgb;
+	vec3 albedo = texelFetch(AlbedoTex, pixelLoc, 0).rgb; //averageSample(AlbedoTex, pixelLoc).rgb;
 
 	vec3 incomingLight = texelFetch(Texture, pixelLoc, 0).rgb;
 	float emission = texelFetch(EmissionTex, pixelLoc, 0).r;
