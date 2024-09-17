@@ -1,4 +1,4 @@
-# Voxel Path Tracer
+# Unnamed Voxel Path Tracer Engine
 A real-time voxel path-tracer using a fast DDA voxel traversal algorithm and spatiotemporal denoising.
 
 ## Showcase
