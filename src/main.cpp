@@ -34,7 +34,7 @@ bool isPositionOccupied(const glm::vec3 pos);
 
 
 // constants
-const std::string	kScenePath = "map.scene";
+const std::string	kScenePath = "menger.scene";
 const std::string	kAssetsFolder = "assets/";
 const bool			kVSYNC = false;
 const char*			kOutputNames[] = { "Result", "Composite", "Illumination", "Albedo", "Emission", "Normal", "Depth", "History"};

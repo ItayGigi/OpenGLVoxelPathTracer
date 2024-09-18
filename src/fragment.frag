@@ -34,7 +34,7 @@ uniform vec3 EnvironmentColor;
 #define BRICK_RES 8
 #define EPSILON 0.00001
 #define SAMPLES 1.
-#define MAX_BOUNCES 6
+#define MAX_BOUNCES 3
 
 uint ns;
 //#define INIT_RNG ns = uint(frame)*uint(Resolution.x*Resolution.y)+uint(TexCoord.x+TexCoord.y*Resolution.x)
@@ -241,7 +241,7 @@ vec3 Trace(Ray ray, GridHit firstHit){
 	vec3 incomingLight = vec3(0.);
 
 	int limit = int(MapSize.x + MapSize.y + MapSize.z);
-	for (int i=0; i < MAX_BOUNCES; i++){
+	for (int i=0; i <= MAX_BOUNCES; i++){
 		GridHit hitInfo;
 		if (i == 0) hitInfo = firstHit;
 		else hitInfo = RaySceneIntersection(ray, vec3(0.), 1., limit);
