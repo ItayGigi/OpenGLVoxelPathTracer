@@ -117,8 +117,8 @@ int main() {
 
 	unsigned int VAO = createVAO();
 
-	Shader shader("vertex.vert", "fragment.frag");
-	Shader post_process_shader("vertex.vert", "postprocessing.frag");
+	Shader shader("src/vertex.vert", "src/fragment.frag");
+	Shader post_process_shader("src/vertex.vert", "src/postprocessing.frag");
 
 	// load scene
 	unsigned int scene_tex, bricks_tex, mats_tex;
