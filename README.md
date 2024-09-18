@@ -27,6 +27,13 @@ https://github.com/user-attachments/assets/447f4425-b7ab-48fc-8955-1ada4bed7fe7
 
 ![minecraft scene](https://github.com/user-attachments/assets/21322e64-10d2-44a4-97d5-fee59943cb3d)
 
+## What's Next?
+- In-game scene editing
+- Better material lighting
+- Overhaul scene representation to use a Sparse Voxel Octree
+- Minecraft world/schematic loading?
+- Try AI denoising solutions?
+
 ## References
 - [Amanatides & Woo “A Fast Voxel Traversal Algorithm For Ray Tracing”](https://www.researchgate.net/publication/2611491_A_Fast_Voxel_Traversal_Algorithm_for_Ray_Tracing)
 - [MagicaVoxel file loading](https://github.com/jpaver/opengametools)
