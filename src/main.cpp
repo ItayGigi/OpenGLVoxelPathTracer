@@ -38,7 +38,7 @@ const std::string	kScenePath = "menger.scene";
 const std::string	kAssetsFolder = "assets/";
 const bool			kVSYNC = false;
 const char*			kOutputNames[] = { "Result", "Composite", "Illumination", "Albedo", "Emission", "Normal", "Depth", "History"};
-const unsigned int	kFPSAverageAmount = 150;
+const unsigned int	kFPSAverageAmount = 80;
 
 
 // window
