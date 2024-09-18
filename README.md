@@ -1,6 +1,9 @@
 # Unnamed Voxel Path Tracer Engine
 A real-time voxel path-tracer using a fast DDA voxel traversal algorithm and spatiotemporal denoising.
 
+## Scene Structure
+The scene consists of low level 8x8x8 voxel grids called 'bricks' and a high level 'brick map' grid that specifies which brick to use in each cell.
+
 ## Showcase
 https://github.com/user-attachments/assets/447f4425-b7ab-48fc-8955-1ada4bed7fe7
 
