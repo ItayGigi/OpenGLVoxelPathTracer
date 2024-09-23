@@ -343,19 +343,30 @@ SamplePoint FindBestSample(GridHit hit, Ray ray){
 	float bestDist = 100.;
 	vec2 bestCoord = vec2(0.);
 
+	vec3 colorSum = vec3(0.);
+	float matchCount = 0.;
+
 	for (int i = 0; i < offsets.length(); i++){
 		if (normalPlane * offsets[i] != offsets[i]) continue;
 
-		vec3 currPos = hitPos + offsets[i]*0.05;
+		vec3 currPos = hitPos + offsets[i]*0.02;
 		vec2 currCoord = WorldToLastScreenCoord(currPos)*0.5+0.5;
 
 		vec3 actualPos = LastCamPosition + normalize(currPos - LastCamPosition) * texture(LastDepthTex, currCoord, 0).r;
 		float dist = distance(hitPos, actualPos);
 		ivec3 normal = texture(LastNormalTex, currCoord, 0).rgb;
 
-		if (dist < bestDist && normal == hit.normal){
-			bestDist = dist;
-			bestCoord = currCoord;
+		if (normal == hit.normal){
+			if (dist < bestDist) {
+				bestDist = dist;
+				bestCoord = currCoord;
+			}
+
+			float maxDist = 0.08;
+			float weight = pow(max(maxDist - dist, 0.)/maxDist, 4);
+
+			colorSum += weight * texture(LastFrameTex, currCoord).rgb;
+			matchCount += weight;
 		}
 	}
 
@@ -366,7 +377,12 @@ SamplePoint FindBestSample(GridHit hit, Ray ray){
 
 	if (bestDist > 0.1) accuracy = 0.;
 
-	return SamplePoint(bestDist, texelFetch(HistoryTex, ivec2(bestCoord*Resolution), 0).r, texture(LastFrameTex, bestCoord).rgb, accuracy);
+	float history = texelFetch(HistoryTex, ivec2(bestCoord*Resolution), 0).r;
+
+	float weight = mix(0.9, 1., min(history/200., 1.));
+	if (hit.mat.roughness < 1.) weight = 1.;
+
+	return SamplePoint(bestDist, history, mix(colorSum/max(matchCount, 1.), texture(LastFrameTex, bestCoord).rgb, weight), accuracy);
 }
 
 void main()
@@ -410,10 +426,6 @@ void main()
 
 	float historyScale = (1. - sample.dist*1.5) * sample.accuracy;
 	if (LastCamPosition != CamPosition) historyScale *= pow(firstHit.mat.roughness, 0.15);
-	//if (sample.dist > 0.1) historyScale = 0.;
-
-	//FragColor = vec3(historyScale);
-	//return;
 
 	FragHistory = sample.history * historyScale + 1.;
 
@@ -425,7 +437,5 @@ void main()
 	FragEmission = firstHit.mat.emission;
 
 	FragColor = mix(sample.color, color, 1.0/(pow(FragHistory, 0.97)));
-
-	//FragColor = color;
 	return;
 }
