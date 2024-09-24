@@ -152,6 +152,7 @@
   <ItemGroup>
     <ClInclude Include="src\brick.h" />
     <ClInclude Include="src\camera.h" />
+    <ClInclude Include="src\drawutil.h" />
     <ClInclude Include="src\imgui\imconfig.h" />
     <ClInclude Include="src\imgui\imgui.h" />
     <ClInclude Include="src\imgui\imgui_impl_glfw.h" />

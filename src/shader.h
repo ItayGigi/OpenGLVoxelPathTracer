@@ -68,6 +68,11 @@ public:
         glDeleteShader(vertex);
         glDeleteShader(fragment);
     }
+
+    Shader(unsigned int id) {
+        ID = id;
+    }
+
     // activate the shader
     // ------------------------------------------------------------------------
     void use()

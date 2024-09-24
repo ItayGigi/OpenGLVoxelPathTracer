@@ -52,23 +52,27 @@ namespace util {
 		glm::vec3 t_next = (glm::vec3(curr_voxel + glm::max(step, glm::ivec3(0))) * voxelSize - ray_start) / dir;
 		glm::vec3 t_delta = voxelSize / abs(dir);
 
-		float dist = glm::max(tMin, 0.0f);
+		float dist = 0.;
 		glm::bvec3 mask = bound_hit.mask;
 
 		int iter = 0;
 		while (last_voxel != curr_voxel && iter++ < gridSize.x + gridSize.y + gridSize.z && dist < limit) {
-			if (isPositionOccupied(glm::vec3(curr_voxel) * voxelSize))
-				return { true, dist, -glm::ivec3(mask) * step };
+			if (isPositionOccupied(glm::vec3(curr_voxel) * voxelSize + glm::vec3(0.001)))
+				return { true, dist + glm::max(tMin, 0.0f), -glm::ivec3(mask) * step };
 
-			mask = glm::bvec3(t_next.x < t_next.y && t_next.x < t_next.z, t_next.y < t_next.x && t_next.y < t_next.z, t_next.z < t_next.x && t_next.z < t_next.y);
+			mask = glm::bvec3(
+				t_next.x < t_next.y && t_next.x < t_next.z,
+				t_next.y < t_next.x && t_next.y < t_next.z,
+				t_next.z < t_next.x && t_next.z < t_next.y);
 
-			dist += glm::min(glm::min(t_next.x, t_next.y), t_next.z);
+			dist = glm::min(glm::min(t_next.x, t_next.y), t_next.z);
+
 			t_next += glm::vec3(mask) * t_delta;
 			curr_voxel += glm::ivec3(mask) * step;
 		}
 
 		if (isPositionOccupied(glm::vec3(curr_voxel) * voxelSize) && dist < limit)
-			return { true, dist, -glm::ivec3(mask) * step };
+			return { true, dist + glm::max(tMin, 0.0f), -glm::ivec3(mask) * step };
 
 		return { false, INFINITY, glm::ivec3(0) };
 	}

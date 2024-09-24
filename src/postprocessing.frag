@@ -7,6 +7,7 @@ in vec2 TexCoord;
 uniform uvec2 Resolution;
 uniform int OutputNum;
 uniform float Gamma;
+uniform int BlurSize;
 
 uniform sampler2D Texture;
 uniform sampler2D AlbedoTex;
@@ -34,13 +35,34 @@ vec4 averageSample(sampler2D tex, ivec2 loc){
 		texelFetch(tex, loc + ivec2(0, -1), 0)*0.1;
 }
 
+vec4 boxBlurIllumination(ivec2 loc, int size, int seperation){
+	vec4 accu = vec4(0.);
+	ivec4 normal = texelFetch(NormalTex, loc, 0);
+	float depth = texelFetch(DepthTex, loc, 0).r;
+	int sampleCount = 0;
+
+	for (int i = -size; i <= size; i++){
+			for (int j = -size; j <= size; j++){
+				ivec2 currLoc = loc + ivec2(i, j) * seperation;
+				
+				if (texelFetch(NormalTex, currLoc, 0) == normal &&
+						abs(texelFetch(DepthTex, currLoc, 0).r - depth) < 0.1){
+					sampleCount++;
+					accu += texelFetch(Texture, currLoc, 0);
+				}
+			}
+	}
+
+	return accu / sampleCount;
+}
+
 void main()
 {
 	ivec2 pixelLoc = ivec2((TexCoord*0.5+0.5)*Resolution);
 
 	vec3 albedo = texelFetch(AlbedoTex, pixelLoc, 0).rgb; //averageSample(AlbedoTex, pixelLoc).rgb;
 
-	vec3 incomingLight = texelFetch(Texture, pixelLoc, 0).rgb;
+	vec3 incomingLight = boxBlurIllumination(pixelLoc, BlurSize, 2).rgb;//texelFetch(Texture, pixelLoc, 0).rgb;
 	float emission = texelFetch(EmissionTex, pixelLoc, 0).r;
 
 	switch(OutputNum){

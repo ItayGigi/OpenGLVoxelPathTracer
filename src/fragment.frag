@@ -379,8 +379,8 @@ SamplePoint FindBestSample(GridHit hit, Ray ray){
 
 	float history = texelFetch(HistoryTex, ivec2(bestCoord*Resolution), 0).r;
 
-	float weight = mix(0.9, 1., min(history/200., 1.));
-	if (hit.mat.roughness < 1.) weight = 1.;
+	float weight = mix(0.85, 1., min(history/200., 1.));
+	if (hit.mat.roughness < 1.) weight = mix(weight, 1., 0.97);
 
 	return SamplePoint(bestDist, history, mix(colorSum/max(matchCount, 1.), texture(LastFrameTex, bestCoord).rgb, weight), accuracy);
 }
@@ -425,7 +425,7 @@ void main()
 	SamplePoint sample = FindBestSample(firstHit, firstRay);
 
 	float historyScale = (1. - sample.dist*1.5) * sample.accuracy;
-	if (LastCamPosition != CamPosition) historyScale *= pow(firstHit.mat.roughness, 0.15);
+	if (LastCamPosition != CamPosition) historyScale *= pow(firstHit.mat.roughness, 0.12);
 
 	FragHistory = sample.history * historyScale + 1.;
 
