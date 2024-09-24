@@ -37,8 +37,8 @@ uniform vec3 EnvironmentColor;
 #define MAX_BOUNCES 3
 
 uint ns;
-//#define INIT_RNG ns = uint(frame)*uint(Resolution.x*Resolution.y)+uint(TexCoord.x+TexCoord.y*Resolution.x)
-#define INIT_RNG ns = FrameCount*uint(Resolution.x*Resolution.y)+uint((0.5*TexCoord.x+0.5)*Resolution.x+(0.5*TexCoord.y+0.5)*Resolution.x*Resolution.y)
+#define INIT_RNG ns = FrameCount*uint(Resolution.x*Resolution.y+529148401u) + uint((0.5*TexCoord.x+0.5)*Resolution.x+(0.5*TexCoord.y+0.5)*Resolution.x*Resolution.y)
+//#define INIT_RNG ns = 388269293u*FrameCount + 529148401u*uint((0.5*TexCoord.x+0.5)*Resolution.x) + 1720567137u*uint((0.5*TexCoord.y+0.5)*Resolution.y)
 
 // PCG Random Number Generator
 void pcg()

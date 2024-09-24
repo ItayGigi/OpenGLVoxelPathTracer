@@ -57,11 +57,8 @@ namespace drawUtils {
         return line_shader;
     }
 
-    void drawLine(const glm::vec2 p1, const glm::vec2 p2)
+    void drawLine(glm::vec2 p1, glm::vec2 p2)
     {
-        //if (p1 != min(max(p1, glm::vec2(-1.)), glm::vec2(1.))) return;
-        //if (p2 != min(max(p2, glm::vec2(-1.)), glm::vec2(1.))) return;
-
         // point 1
         line_data.push_back(p1.x);
         line_data.push_back(p1.y);

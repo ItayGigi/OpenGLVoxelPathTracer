@@ -174,7 +174,7 @@ public:
 
 		float aspect = float(width) / height;
 
-		return glm::vec2(local.x / local.z * 1.5 / aspect, local.y / local.z * 1.5);
+		return glm::vec2(local.x / aspect, local.y) / glm::max(local.z, 0.00001f) * 1.5f;
 	}
 
 private:

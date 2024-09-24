@@ -41,11 +41,13 @@ void drawSelectedBrickLines();
 
 
 // constants
-const std::string	kScenePath = "menger.scene";
+const std::string	kScenePath = "map.scene";
 const std::string	kAssetsFolder = "assets/";
 const bool			kVSYNC = false;
 const char*			kOutputNames[] = { "Result", "Composite", "Illumination", "Albedo", "Emission", "Normal", "Depth", "History"};
 const unsigned int	kFPSAverageAmount = 80;
+const glm::vec3		kSelectedLineColor(0);
+const glm::vec3		kCrosshairColor(0.2);
 
 
 // window
@@ -443,10 +445,10 @@ void draw(Shader shader, Shader post_shader, unsigned int vao) {
 	glBindVertexArray(vao);
 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
-	drawUtils::line_color = glm::vec3(1.);
+	drawUtils::line_color = kSelectedLineColor;
 	drawSelectedBrickLines();
 
-	drawUtils::line_color = glm::vec3(0.2);
+	drawUtils::line_color = kCrosshairColor;
 	float cross_hair_size = 0.03;
 	drawUtils::drawLine(glm::vec2(-cross_hair_size * window_height / window_width, 0.), glm::vec2(cross_hair_size * window_height / window_width, 0.));
 	drawUtils::drawLine(glm::vec2(0., -cross_hair_size), glm::vec2(0., cross_hair_size));
