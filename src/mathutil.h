@@ -56,7 +56,7 @@ namespace util {
 		glm::bvec3 mask = bound_hit.mask;
 
 		int iter = 0;
-		while (last_voxel != curr_voxel && iter++ < gridSize.x + gridSize.y + gridSize.z && dist < limit) {
+		while (last_voxel != curr_voxel && iter++ < gridSize.x + gridSize.y + gridSize.z && dist + glm::max(tMin, 0.0f) < limit) {
 			if (isPositionOccupied(glm::vec3(curr_voxel) * voxelSize + glm::vec3(0.001)))
 				return { true, dist + glm::max(tMin, 0.0f), -glm::ivec3(mask) * step };
 
@@ -71,7 +71,7 @@ namespace util {
 			curr_voxel += glm::ivec3(mask) * step;
 		}
 
-		if (isPositionOccupied(glm::vec3(curr_voxel) * voxelSize) && dist < limit)
+		if (isPositionOccupied(glm::vec3(curr_voxel) * voxelSize) && dist + glm::max(tMin, 0.0f) < limit)
 			return { true, dist + glm::max(tMin, 0.0f), -glm::ivec3(mask) * step };
 
 		return { false, INFINITY, glm::ivec3(0) };

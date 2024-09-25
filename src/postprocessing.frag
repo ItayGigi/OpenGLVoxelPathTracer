@@ -88,7 +88,7 @@ void main()
 		return;
 
 		case 6: // Depth
-		FragColor = texelFetch(DepthTex, pixelLoc, 0).rrr/50.;
+		FragColor = texelFetch(DepthTex, pixelLoc, 0).rrr/10.;
 		return;
 
 		case 7: // History

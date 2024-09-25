@@ -177,6 +177,10 @@ public:
 		return glm::vec2(local.x / aspect, local.y) / glm::max(local.z, 0.00001f) * 1.5f;
 	}
 
+	glm::vec3 WorldToView(const glm::vec3 world_pos) {
+		return glm::transpose(glm::mat4_cast(GetRotation())) * glm::vec4(world_pos - position, 0.);
+	}
+
 private:
 	// calculates the front vector from the Camera's (updated) Euler Angles
 	void updateCameraVectors_()

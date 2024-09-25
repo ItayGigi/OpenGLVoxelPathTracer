@@ -41,13 +41,21 @@ void drawSelectedBrickLines();
 
 
 // constants
-const std::string	kScenePath = "map.scene";
+const std::string	kScenePath = "menger.scene";
 const std::string	kAssetsFolder = "assets/";
+
 const bool			kVSYNC = false;
-const char*			kOutputNames[] = { "Result", "Composite", "Illumination", "Albedo", "Emission", "Normal", "Depth", "History"};
+
+const char* kOutputNames[] = { "Result", "Composite", "Illumination", "Albedo", "Emission", "Normal", "Depth", "History" };
 const unsigned int	kFPSAverageAmount = 80;
-const glm::vec3		kSelectedLineColor(0);
+
+const float			kMaxHighlightDistance = 8.;
+
+const glm::vec3		kSelectedLineColor(0.);
 const glm::vec3		kCrosshairColor(0.2);
+const float			kCrosshairSize = 0.02;
+const float			kLineWidth = 2;
+
 
 
 // window
@@ -113,6 +121,8 @@ int main() {
 		return -1;
 	}
 
+	drawUtils::setLineWidth(kLineWidth);
+
 	// Setup Dear ImGui context
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
@@ -148,8 +158,6 @@ int main() {
 
 	framebufferSizeCallback(window, window_width, window_height);
 
-	drawUtils::setLineWidth(1.5f);
-
 	// render loop
 	while (!glfwWindowShouldClose(window))
 	{
@@ -164,20 +172,27 @@ int main() {
 
 		glfwPollEvents();
 
+		draw(shader, post_process_shader, VAO);
+
 		ImGui_ImplOpenGL3_NewFrame();
 		ImGui_ImplGlfw_NewFrame();
 		ImGui::NewFrame();
 
 		createDebugImGuiWindow();
 
-		draw(shader, post_process_shader, VAO);
-
 		ImGui::Render();
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
+		// swap buffers
+		std::swap(fbo1, fbo2);
+		std::swap(buffer_textures1, buffer_textures2);
+
 		glfwSwapBuffers(window);
+
+		last_camera = camera;
 	}
 
+	// delete all textures
 	glDeleteTextures(1, &scene_tex);
 	glDeleteTextures(1, &bricks_tex);
 	glDeleteTextures(1, &mats_tex);
@@ -259,6 +274,8 @@ void framebufferSizeCallback(GLFWwindow* window, int width, int height)
 	}
 
 	glBindBuffer(GL_FRAMEBUFFER, 0);
+
+	drawUtils::passResolution(window_width, window_height);
 }
 
 // process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
@@ -326,7 +343,7 @@ void createDebugImGuiWindow() {
 	ImGui::SetNextWindowPos({ 0, 0 });
 
 	ImGui::Begin("Debug Window", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
-	
+
 	if (do_next_focus) {
 		ImGui::SetWindowFocus();
 		do_next_focus = false;
@@ -427,9 +444,10 @@ void draw(Shader shader, Shader post_shader, unsigned int vao) {
 	glBindVertexArray(vao);
 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
+	// post processing
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	post_shader.use();
-	
+
 	post_shader.setUVec2("Resolution", window_width, window_height);
 	post_shader.setInt("OutputNum", selected_output);
 	post_shader.setFloat("Gamma", gamma);
@@ -445,28 +463,23 @@ void draw(Shader shader, Shader post_shader, unsigned int vao) {
 	glBindVertexArray(vao);
 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
+	// selected highlight outline
+	drawUtils::passDepthTexture(buffer_textures1[DEPTH_TEXTURE], 5 + DEPTH_TEXTURE);
+
 	drawUtils::line_color = kSelectedLineColor;
 	drawSelectedBrickLines();
 
+	// crosshair
 	drawUtils::line_color = kCrosshairColor;
-	float cross_hair_size = 0.03;
-	drawUtils::drawLine(glm::vec2(-cross_hair_size * window_height / window_width, 0.), glm::vec2(cross_hair_size * window_height / window_width, 0.));
-	drawUtils::drawLine(glm::vec2(0., -cross_hair_size), glm::vec2(0., cross_hair_size));
-
-	//drawUtils::line_color = glm::vec3(0.2, 1., 0.1);
-	//drawUtils::drawLine(glm::vec2(0), camera.WorldToScreen(glm::vec3(0), window_width, window_height));
+	drawUtils::drawLine(glm::vec2(-kCrosshairSize * window_height / window_width, 0.), glm::vec2(kCrosshairSize * window_height / window_width, 0.));
+	drawUtils::drawLine(glm::vec2(0., -kCrosshairSize), glm::vec2(0., kCrosshairSize));
 
 	drawUtils::drawLinesFlush();
-
-	std::swap(fbo1, fbo2);
-	std::swap(buffer_textures1, buffer_textures2);
-
-	last_camera = camera;
 }
 
 bool loadScene(Shader shader, const std::string scene_path, unsigned int* map_texture, unsigned int* bricks_texture, unsigned int* mats_texture) {
 	std::ifstream scene_file(kAssetsFolder + scene_path);
-	
+
 	if (!scene_file) {
 		std::cout << "Scene file \'" << kAssetsFolder << scene_path << "\' not found.\n";
 		return false;
@@ -491,7 +504,7 @@ bool loadScene(Shader shader, const std::string scene_path, unsigned int* map_te
 	std::string next_brick_path;
 	while (scene_file >> next_brick_path)
 		brick_paths.push_back(next_brick_path);
-	
+
 	shader.use();
 	shader.setUVec3("MapSize", brick_map->size.x, brick_map->size.y, brick_map->size.z);
 
@@ -565,7 +578,7 @@ bool isPositionOccupied(const glm::vec3 pos) {
 		return false;
 
 	unsigned int brick_ID = brick_map->getVoxel(pos.x, pos.y, pos.z);
-	
+
 	if (brick_ID == 0) return false; // air
 
 	glm::ivec3 in_brick_pos = glm::ivec3(pos * float(BRICK_SIZE)) % BRICK_SIZE;
@@ -575,23 +588,31 @@ bool isPositionOccupied(const glm::vec3 pos) {
 }
 
 void drawSelectedBrickLines() {
-	util::RayHit hit = util::rayCast(camera.position, camera.front, &isPositionOccupied, 0.125f, brick_map->size * BRICK_SIZE, 10.);
+	util::RayHit hit = util::rayCast(camera.position, camera.front, &isPositionOccupied, 1. / BRICK_SIZE, brick_map->size * BRICK_SIZE, kMaxHighlightDistance);
 
 	if (!hit.hit) return;
 
 	glm::ivec3 hit_brick = camera.position + (hit.dist + 0.0001f) * camera.front;
 
+	glm::vec3 p1, p2;
+
 	for (int i = 0; i < 2; i++) for (int j = 0; j < 2; j++) {
-		drawUtils::drawLine(
-			camera.WorldToScreen(hit_brick + glm::ivec3(0, i, j), window_width, window_height),
-			camera.WorldToScreen(hit_brick + glm::ivec3(1, i, j), window_width, window_height));
+		p1 = hit_brick + glm::ivec3(0, i, j);
+		p2 = hit_brick + glm::ivec3(1, i, j);
+		drawUtils::drawLineDepth(
+			camera.WorldToScreen(p1, window_width, window_height), camera.WorldToView(p1),
+			camera.WorldToScreen(p2, window_width, window_height), camera.WorldToView(p2));
 
-		drawUtils::drawLine(
-			camera.WorldToScreen(hit_brick + glm::ivec3(i, 0, j), window_width, window_height),
-			camera.WorldToScreen(hit_brick + glm::ivec3(i, 1, j), window_width, window_height));
+		p1 = hit_brick + glm::ivec3(i, 0, j);
+		p2 = hit_brick + glm::ivec3(i, 1, j);
+		drawUtils::drawLineDepth(
+			camera.WorldToScreen(p1, window_width, window_height), camera.WorldToView(p1),
+			camera.WorldToScreen(p2, window_width, window_height), camera.WorldToView(p2));
 
-		drawUtils::drawLine(
-			camera.WorldToScreen(hit_brick + glm::ivec3(i, j, 0), window_width, window_height),
-			camera.WorldToScreen(hit_brick + glm::ivec3(i, j, 1), window_width, window_height));
+		p1 = hit_brick + glm::ivec3(i, j, 0);
+		p2 = hit_brick + glm::ivec3(i, j, 1);
+		drawUtils::drawLineDepth(
+			camera.WorldToScreen(p1, window_width, window_height), camera.WorldToView(p1),
+			camera.WorldToScreen(p2, window_width, window_height), camera.WorldToView(p2));
 	}
 }
