@@ -31,6 +31,7 @@ enum BufferTexture {
 void framebufferSizeCallback(GLFWwindow* window, int width, int height);
 void mouseCallback(GLFWwindow* window, double x_pos, double y_pos);
 void scrollCallback(GLFWwindow* window, double x_offset, double y_offset);
+void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
 void processInput(GLFWwindow* window);
 void createDebugImGuiWindow();
 unsigned int createVAO();
@@ -41,7 +42,6 @@ void drawSelectedBrickLines();
 
 
 // constants
-const std::string	kScenePath = "menger.scene";
 const std::string	kAssetsFolder = "assets/";
 
 const bool			kVSYNC = false;
@@ -88,11 +88,16 @@ std::queue<float> last_frame_times;
 unsigned int fbo1, fbo2;
 unsigned int buffer_textures1[6], buffer_textures2[6];
 
+unsigned int scene_tex, bricks_tex, mats_tex;
+
 int selected_output = 0;
 float gamma = 2.2f;
 int blur_size = 2;
 
-int main() {
+glm::ivec3 selected_brick;
+glm::ivec3 selected_brick_normal;
+
+int main(int argc, const char* argv[]) {
 	// initialize glfw
 	glfwInit();
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
@@ -111,6 +116,7 @@ int main() {
 	glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
 	glfwSetCursorPosCallback(window, mouseCallback);
 	glfwSetScrollCallback(window, scrollCallback);
+	glfwSetMouseButtonCallback(window, mouseButtonCallback);
 	glfwSwapInterval(kVSYNC);
 
 	// initialize glad
@@ -143,14 +149,18 @@ int main() {
 	drawUtils::initLineShader();
 
 	// load scene
-	unsigned int scene_tex, bricks_tex, mats_tex;
-	if (!loadScene(shader, kScenePath, &scene_tex, &bricks_tex, &mats_tex)) {
-		std::cerr << "failed to load scene. exiting" << std::endl;
+	if (argc < 2) {
+		std::cerr << "Scene name expected as an argument. Exiting." << std::endl;
+		return 2;
+	}
+
+	if (!loadScene(shader, argv[1], &scene_tex, &bricks_tex, &mats_tex)) {
+		std::cerr << "Failed to load scene. Exiting." << std::endl;
 		glDeleteTextures(1, &scene_tex);
 		glDeleteTextures(1, &bricks_tex);
 		glDeleteTextures(1, &mats_tex);
 		glfwTerminate();
-		return -1;
+		return 1;
 	}
 
 	glGenFramebuffers(1, &fbo1);
@@ -168,9 +178,17 @@ int main() {
 
 		camera.Update(delta_time, &isPositionOccupied, brick_map->size * 8);
 
+		glfwPollEvents();
+
 		processInput(window);
 
-		glfwPollEvents();
+		// raycast selected brick
+		util::RayHit hit = util::rayCast(camera.position, camera.front, &isPositionOccupied, 1. / BRICK_SIZE, brick_map->size * BRICK_SIZE, kMaxHighlightDistance);
+
+		if (hit.hit) selected_brick = camera.position + (hit.dist + 0.0001f) * camera.front;
+		else selected_brick = glm::ivec3(-1);
+
+		selected_brick_normal = hit.normal;
 
 		draw(shader, post_process_shader, VAO);
 
@@ -339,6 +357,26 @@ void scrollCallback(GLFWwindow* window, double x_offset, double y_offset)
 	camera.ProcessMouseScroll(static_cast<float>(y_offset));
 }
 
+void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
+	if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS && !is_mouse_enabled && selected_brick != glm::ivec3(-1)) {
+		brick_map->setVoxel(selected_brick.x, selected_brick.y, selected_brick.z, 0); // delete selected brick
+
+		// update texture
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, scene_tex);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_R32UI, brick_map->size.x * brick_map->size.y / 8, brick_map->size.z, 0, GL_RED_INTEGER, GL_UNSIGNED_INT, brick_map->data.data());
+	}
+
+	if (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_PRESS && !is_mouse_enabled && selected_brick != glm::ivec3(-1)) {
+		brick_map->setVoxel(selected_brick.x + selected_brick_normal.x, selected_brick.y + selected_brick_normal.y, selected_brick.z + selected_brick_normal.z, 1); // place brick
+
+		// update texture
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, scene_tex);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_R32UI, brick_map->size.x * brick_map->size.y / 8, brick_map->size.z, 0, GL_RED_INTEGER, GL_UNSIGNED_INT, brick_map->data.data());
+	}
+}
+
 void createDebugImGuiWindow() {
 	ImGui::SetNextWindowPos({ 0, 0 });
 
@@ -477,7 +515,7 @@ void draw(Shader shader, Shader post_shader, unsigned int vao) {
 	drawUtils::drawLinesFlush();
 }
 
-bool loadScene(Shader shader, const std::string scene_path, unsigned int* map_texture, unsigned int* bricks_texture, unsigned int* mats_texture) {
+bool loadScene(Shader shader, const std::string scene_path, unsigned int* scene_texture, unsigned int* bricks_texture, unsigned int* mats_texture) {
 	std::ifstream scene_file(kAssetsFolder + scene_path);
 
 	if (!scene_file) {
@@ -508,9 +546,9 @@ bool loadScene(Shader shader, const std::string scene_path, unsigned int* map_te
 	shader.use();
 	shader.setUVec3("MapSize", brick_map->size.x, brick_map->size.y, brick_map->size.z);
 
-	glGenTextures(1, map_texture);
+	glGenTextures(1, scene_texture);
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, *mats_texture);
+	glBindTexture(GL_TEXTURE_2D, *scene_texture);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_R32UI, brick_map->size.x * brick_map->size.y / 8, brick_map->size.z, 0, GL_RED_INTEGER, GL_UNSIGNED_INT, brick_map->data.data());
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -588,29 +626,25 @@ bool isPositionOccupied(const glm::vec3 pos) {
 }
 
 void drawSelectedBrickLines() {
-	util::RayHit hit = util::rayCast(camera.position, camera.front, &isPositionOccupied, 1. / BRICK_SIZE, brick_map->size * BRICK_SIZE, kMaxHighlightDistance);
-
-	if (!hit.hit) return;
-
-	glm::ivec3 hit_brick = camera.position + (hit.dist + 0.0001f) * camera.front;
+	if (selected_brick == glm::ivec3(-1)) return;
 
 	glm::vec3 p1, p2;
 
 	for (int i = 0; i < 2; i++) for (int j = 0; j < 2; j++) {
-		p1 = hit_brick + glm::ivec3(0, i, j);
-		p2 = hit_brick + glm::ivec3(1, i, j);
+		p1 = selected_brick + glm::ivec3(0, i, j);
+		p2 = selected_brick + glm::ivec3(1, i, j);
 		drawUtils::drawLineDepth(
 			camera.WorldToScreen(p1, window_width, window_height), camera.WorldToView(p1),
 			camera.WorldToScreen(p2, window_width, window_height), camera.WorldToView(p2));
 
-		p1 = hit_brick + glm::ivec3(i, 0, j);
-		p2 = hit_brick + glm::ivec3(i, 1, j);
+		p1 = selected_brick + glm::ivec3(i, 0, j);
+		p2 = selected_brick + glm::ivec3(i, 1, j);
 		drawUtils::drawLineDepth(
 			camera.WorldToScreen(p1, window_width, window_height), camera.WorldToView(p1),
 			camera.WorldToScreen(p2, window_width, window_height), camera.WorldToView(p2));
 
-		p1 = hit_brick + glm::ivec3(i, j, 0);
-		p2 = hit_brick + glm::ivec3(i, j, 1);
+		p1 = selected_brick + glm::ivec3(i, j, 0);
+		p2 = selected_brick + glm::ivec3(i, j, 1);
 		drawUtils::drawLineDepth(
 			camera.WorldToScreen(p1, window_width, window_height), camera.WorldToView(p1),
 			camera.WorldToScreen(p2, window_width, window_height), camera.WorldToView(p2));

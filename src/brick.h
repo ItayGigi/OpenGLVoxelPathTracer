@@ -21,10 +21,21 @@ public:
 
 public:
 	uint8_t getVoxel(unsigned int x, unsigned int y, unsigned int z) {
-		if (x < 0 || y < 0 || z < 0 || x > size.x || y > size.y || z > size.z)
+		if (x < 0 || y < 0 || z < 0 || x >= size.x || y >= size.y || z >= size.z)
 			return 0;
 
 		return (data[(z * size.x + x) * size.y / 8 + y / 8] >> ((y % 8) * 4)) & 0xFu;
+	}
+
+	void setVoxel(unsigned int x, unsigned int y, unsigned int z, uint8_t val) {
+		if (x < 0 || y < 0 || z < 0 || x >= size.x || y >= size.y || z >= size.z)
+			return;
+		if (val > 0xFu)
+			return;
+
+		uint32_t &v = data[(z * size.x + x) * size.y / 8 + y / 8];
+
+		v = (v & ~(0xFu << ((y % 8) * 4))) | (val << ((y % 8) * 4));
 	}
 
 protected:
