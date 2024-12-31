@@ -4,7 +4,9 @@
 #include <glad/glad.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/quaternion.hpp>
 #include <functional>
+#include "scene.h"
 #include "mathutil.h"
 
 // Defines several possible options for camera movement. Used as abstraction to stay away from window-system specific input methods
@@ -76,59 +78,59 @@ public:
 		return glm::lookAt(position, position + front, up);
 	}
 
-	void Update(float delta_time, std::function<bool(const glm::vec3)> isPositionOccupied, glm::ivec3 grid_size) {
+	void Update(float delta_time, Scene* scene) {
 		if (no_clip) return;
 
 		if (!is_grounded) {
 			y_vel -= GRAVITY * delta_time;
 		}
 
-		Move(glm::vec3(0.0f, glm::sign(y_vel), 0.0f), glm::abs(y_vel) * delta_time, isPositionOccupied, grid_size);
+		Move(glm::vec3(0.0f, glm::sign(y_vel), 0.0f), glm::abs(y_vel) * delta_time, scene);
 
 		//std::cout << y_vel << "\n";
 	}
 
 	// processes input received from any keyboard-like input system. Accepts input parameter in the form of camera defined ENUM (to abstract it from windowing systems)
-	void ProcessKeyboard(Camera_Movement direction, float delta_time, std::function<bool(const glm::vec3)> isPositionOccupied, glm::ivec3 grid_size)
+	void ProcessKeyboard(Camera_Movement direction, float delta_time, Scene* scene)
 	{
 		float move_amount = movement_speed * delta_time;
 
 		if (direction == FORWARD)
-			Move(glm::normalize(glm::cross(right, world_up)), move_amount, isPositionOccupied, grid_size);
+			Move(glm::normalize(glm::cross(right, world_up)), move_amount, scene);
 		if (direction == BACKWARD)
-			Move(-glm::normalize(glm::cross(right, world_up)), move_amount, isPositionOccupied, grid_size);
+			Move(-glm::normalize(glm::cross(right, world_up)), move_amount, scene);
 		if (direction == LEFT)
-			Move(-right, move_amount, isPositionOccupied, grid_size);
+			Move(-right, move_amount, scene);
 		if (direction == RIGHT)
-			Move(right, move_amount, isPositionOccupied, grid_size);
+			Move(right, move_amount, scene);
 		if (!no_clip && direction == UP && is_grounded)
 			y_vel = jump_force;
 
 		if (!no_clip) return;
 
 		if (direction == DOWN)
-			Move(-world_up, move_amount, isPositionOccupied, grid_size);
+			Move(-world_up, move_amount, scene);
 		if (direction == UP)
-			Move(world_up, move_amount, isPositionOccupied, grid_size);
+			Move(world_up, move_amount, scene);
 	}
 
-	void Move(glm::vec3 dir, float amount, std::function<bool(const glm::vec3)> isPositionOccupied, glm::ivec3 grid_size)
+	void Move(glm::vec3 dir, float amount, Scene* scene)
 	{
 		if (no_clip) {
 			position += normalize(dir) * amount;
 			return;
 		}
 
-		glm::vec3 new_pos = getMovePosition_(position, dir, amount, isPositionOccupied, grid_size);
-		while (isPositionOccupied(new_pos)) {
+		glm::vec3 new_pos = getMovePosition_(position, dir, amount, scene);
+		while (scene->IsPositionOccupied(new_pos)) {
 			amount -= 0.01f;
-			new_pos = getMovePosition_(position, dir, amount, isPositionOccupied, grid_size);
+			new_pos = getMovePosition_(position, dir, amount, scene);
 		}
 		position = new_pos;
 
-		bool now_grounded = getMovePosition_(position, glm::vec3(0., -1., 0.), 0.1f, isPositionOccupied, grid_size) == position;
+		bool now_grounded = getMovePosition_(position, glm::vec3(0., -1., 0.), 0.1f, scene) == position;
 
-		bool now_head_bump = getMovePosition_(position, glm::vec3(0., 1., 0.), 0.1f, isPositionOccupied, grid_size) == position;
+		bool now_head_bump = getMovePosition_(position, glm::vec3(0., 1., 0.), 0.1f, scene) == position;
 
 		if ((!is_grounded && now_grounded) || (!is_head_bump && now_head_bump)) {
 			y_vel = 0.0f;
@@ -196,7 +198,7 @@ private:
 		up = glm::normalize(glm::cross(right, front));
 	}
 
-	glm::vec3 getMovePosition_(glm::vec3 pos, glm::vec3 dir, float amount, std::function<bool(const glm::vec3)> isPositionOccupied, glm::ivec3 grid_size) {
+	glm::vec3 getMovePosition_(glm::vec3 pos, glm::vec3 dir, float amount, Scene* scene) {
 		dir = glm::normalize(dir);
 
 		glm::ivec3 offsets[] = {
@@ -237,7 +239,7 @@ private:
 					offset = glm::mix(offset, side, 0.8);
 
 					glm::vec3 origin = pos + glm::vec3(offset) * collider_half_width;
-					util::RayHit hit = util::rayCast(origin, dir, isPositionOccupied, 0.125f, grid_size, amount);
+					util::RayHit hit = scene->CastRay(origin, dir, amount);
 					if (hit.hit && hit.dist < min_hit.dist) {
 						min_hit = hit;
 						hit_normal = -side;

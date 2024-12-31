@@ -89,6 +89,15 @@
     <ClInclude Include="src\drawutil.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\renderer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\scene.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\config.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="src\fragment.frag" />

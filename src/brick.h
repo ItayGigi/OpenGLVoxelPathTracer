@@ -2,7 +2,6 @@
 #define BRICK_H
 
 #define OGT_VOX_IMPLEMENTATION
-#define BRICK_SIZE 8
 
 #include <glad/glad.h>
 #include <string>
@@ -11,8 +10,8 @@
 #include <iostream>
 #include <io.h>
 #include <vector>
-#include "camera.h"
 #include "ogt_vox.h"
+#include "config.h"
 
 class VoxelGrid {
 public:
@@ -87,7 +86,8 @@ class BrickMap : public VoxelGrid
 {
 public:
 	glm::vec3 env_color;
-	Camera camera;
+	glm::vec3 camera_pos;
+	glm::vec3 camera_angles;
 
 	// read brickmap from MagicaVoxel file
 	BrickMap(const char* file_path) {
@@ -111,13 +111,12 @@ public:
 
 		// calculate saved camera position from file
 		ogt_vox_cam vox_cam = scene->cameras[0];
-		glm::vec3 angles(vox_cam.angle[0], -vox_cam.angle[1], vox_cam.angle[2]);
+		camera_angles = glm::vec3(vox_cam.angle[0], -vox_cam.angle[1], vox_cam.angle[2]);
 		glm::vec3 cam_front(
-			cos(glm::radians(angles.x)) * sin(glm::radians(angles.y)),
-			sin(glm::radians(angles.x)),
-			cos(glm::radians(angles.x)) * cos(glm::radians(angles.y)));
-		glm::vec3 cam_pos = glm::vec3(vox_cam.focus[0] + (float)size.x / 2.0f, vox_cam.focus[2], vox_cam.focus[1] + (float)size.z / 2.0f) - glm::vec3(vox_cam.radius) * cam_front;
-		camera = Camera(cam_pos, { {0.0f},{1.0f},{0.0f} }, angles.y, angles.x);
+			cos(glm::radians(camera_angles.x)) * sin(glm::radians(camera_angles.y)),
+			sin(glm::radians(camera_angles.x)),
+			cos(glm::radians(camera_angles.x)) * cos(glm::radians(camera_angles.y)));
+		camera_pos = glm::vec3(vox_cam.focus[0] + (float)size.x / 2.0f, vox_cam.focus[2], vox_cam.focus[1] + (float)size.z / 2.0f) - glm::vec3(vox_cam.radius) * cam_front;
 	}
 };
 
@@ -144,23 +143,23 @@ public:
 
 		const ogt_vox_model* model = scene->models[0];
 
-		if (model->size_x != BRICK_SIZE || model->size_y != BRICK_SIZE || model->size_z != BRICK_SIZE) {
+		if (model->size_x != config::BrickSize || model->size_y != config::BrickSize || model->size_z != config::BrickSize) {
 			std::cerr << file_path << ": model dimensions mismatch" << std::endl;
 			ogt_vox_destroy_scene(scene);
 			return;
 		}
 
-		size = glm::ivec3(BRICK_SIZE);
+		size = glm::ivec3(config::BrickSize);
 
 		int8_t pallet_to_my_mat[256] = { 0 };
-		uint8_t voxel_data[BRICK_SIZE * BRICK_SIZE * BRICK_SIZE];
+		uint8_t voxel_data[config::BrickSize * config::BrickSize * config::BrickSize];
 
-		std::copy(model->voxel_data, model->voxel_data + BRICK_SIZE * BRICK_SIZE * BRICK_SIZE, std::begin(voxel_data));
+		std::copy(model->voxel_data, model->voxel_data + config::BrickSize * config::BrickSize * config::BrickSize, std::begin(voxel_data));
 
 		mats.push_back(Material(0, 0, 0));
 
 		// assign materials
-		for (int i = 0; i < BRICK_SIZE * BRICK_SIZE * BRICK_SIZE; i++)
+		for (int i = 0; i < config::BrickSize * config::BrickSize * config::BrickSize; i++)
 		{
 			if (voxel_data[i] == 0) continue;
 
@@ -183,8 +182,8 @@ public:
 			}
 		}
 
-		data = std::vector<uint32_t>(BRICK_SIZE * BRICK_SIZE * BRICK_SIZE / 8);
-		encodeData_(voxel_data, BRICK_SIZE, BRICK_SIZE, BRICK_SIZE);
+		data = std::vector<uint32_t>(config::BrickSize * config::BrickSize * config::BrickSize / 8);
+		encodeData_(voxel_data, config::BrickSize, config::BrickSize, config::BrickSize);
 
 		ogt_vox_destroy_scene(scene);
 	}
