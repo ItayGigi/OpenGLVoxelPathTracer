@@ -86,8 +86,8 @@ class BrickMap : public VoxelGrid
 {
 public:
 	glm::vec3 env_color;
-	glm::vec3 camera_pos;
-	glm::vec3 camera_angles;
+	glm::vec3 camera_start_pos;
+	glm::vec3 camera_start_angles;
 
 	// read brickmap from MagicaVoxel file
 	BrickMap(const char* file_path) {
@@ -111,12 +111,12 @@ public:
 
 		// calculate saved camera position from file
 		ogt_vox_cam vox_cam = scene->cameras[0];
-		camera_angles = glm::vec3(vox_cam.angle[0], -vox_cam.angle[1], vox_cam.angle[2]);
+		camera_start_angles = glm::vec3(vox_cam.angle[0], -vox_cam.angle[1], vox_cam.angle[2]);
 		glm::vec3 cam_front(
-			cos(glm::radians(camera_angles.x)) * sin(glm::radians(camera_angles.y)),
-			sin(glm::radians(camera_angles.x)),
-			cos(glm::radians(camera_angles.x)) * cos(glm::radians(camera_angles.y)));
-		camera_pos = glm::vec3(vox_cam.focus[0] + (float)size.x / 2.0f, vox_cam.focus[2], vox_cam.focus[1] + (float)size.z / 2.0f) - glm::vec3(vox_cam.radius) * cam_front;
+			cos(glm::radians(camera_start_angles.x)) * sin(glm::radians(camera_start_angles.y)),
+			sin(glm::radians(camera_start_angles.x)),
+			cos(glm::radians(camera_start_angles.x)) * cos(glm::radians(camera_start_angles.y)));
+		camera_start_pos = glm::vec3(vox_cam.focus[0] + (float)size.x / 2.0f, vox_cam.focus[2], vox_cam.focus[1] + (float)size.z / 2.0f) - glm::vec3(vox_cam.radius) * cam_front;
 	}
 };
 

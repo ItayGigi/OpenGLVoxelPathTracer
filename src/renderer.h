@@ -514,7 +514,7 @@ private:
 
 		shader->setVec3("EnvironmentColor", scene.brick_map->env_color);
 
-		camera = Camera(scene.brick_map->camera_pos, { {0.0f},{1.0f},{0.0f} }, scene.brick_map->camera_angles.y, scene.brick_map->camera_angles.x);;
+		camera = Camera(scene.brick_map->camera_start_pos, { {0.0f},{1.0f},{0.0f} }, scene.brick_map->camera_start_angles.y, scene.brick_map->camera_start_angles.x);;
 
 		return true;
 	}
