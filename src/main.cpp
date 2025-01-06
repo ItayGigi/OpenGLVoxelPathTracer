@@ -8,8 +8,6 @@ void mouseCallback(GLFWwindow* window, double x_pos, double y_pos);
 void scrollCallback(GLFWwindow* window, double x_offset, double y_offset);
 void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
 
-const int start_window_width = config::WindowStartWidth, start_window_height = config::WindowStartHeight;
-
 Renderer renderer;
 
 int main(int argc, const char* argv[]) {
@@ -20,7 +18,7 @@ int main(int argc, const char* argv[]) {
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 	// create window
-	GLFWwindow* window = glfwCreateWindow(start_window_width, start_window_height, config::WindowName, NULL, NULL);
+	GLFWwindow* window = glfwCreateWindow(config::WindowStartWidth, config::WindowStartHeight, config::WindowName, NULL, NULL);
 	if (window == NULL)
 	{
 		std::cout << "Failed to create GLFW window" << std::endl;
@@ -45,7 +43,7 @@ int main(int argc, const char* argv[]) {
 	int init_status = renderer.Initialize(window, argc, argv);
 	if (init_status != 0) return init_status;
 
-	renderer.HandleFramebufferSizeCallback(window, start_window_width, start_window_height);
+	renderer.HandleFramebufferSizeCallback(window, config::WindowStartWidth, config::WindowStartHeight);
 
 	// render loop
 	while (!glfwWindowShouldClose(window))
