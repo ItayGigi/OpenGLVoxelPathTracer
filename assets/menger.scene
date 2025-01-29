@@ -3,3 +3,6 @@ menger.vox
 color
 
 bricks/frame.vox
+bricks/block.vox
+bricks/dirt.vox
+bricks/light.vox
