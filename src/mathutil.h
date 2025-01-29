@@ -6,7 +6,7 @@
 
 namespace util {
 	struct SlabIntersection {
-		bool hit;
+		bool did_hit;
 		float tmin, tmax;
 		glm::bvec3 mask;
 	};
@@ -27,7 +27,7 @@ namespace util {
 	}
 
 	struct RayHit {
-		bool hit;
+		bool did_hit;
 		float dist;
 		glm::ivec3 normal;
 	};

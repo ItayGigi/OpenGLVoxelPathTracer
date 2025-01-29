@@ -11,8 +11,8 @@ namespace config {
 	const char*			WindowName = "My Window";
 
 	const char*			VertexShaderPath = "shaders/vertex.vert";
-	const char*			FragShaderPath = "shaders/fragment.frag";
-	const char*			PostFragShaderPath = "shaders/postprocess.frag";
+	const char*			FragShaderPath = "shaders/pathtrace.frag";
+	const char*			PostFragShaderPath = "shaders/composite.frag";
 
 	const int			BrickSize = 8;
 

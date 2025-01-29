@@ -134,12 +134,21 @@ struct Material
 class Brick : public VoxelGrid
 {
 public:
+	std::string name;
+
 	std::vector<Material> mats;
 
 	// read brick from MagicaVoxel file
 	Brick(const char* file_path) {
 		const ogt_vox_scene* scene = readScene_(file_path);
 		if (!scene) return;
+
+		name = std::string(file_path);
+		int dot_index = name.find_first_of('.');
+		if (dot_index <= name.size()) name = name.substr(0, dot_index);
+		//int seperator_index = name.find_last_of('\\/');
+		//if (seperator_index <= name.size()) name = name.substr(seperator_index+1);
+
 
 		const ogt_vox_model* model = scene->models[0];
 

@@ -98,10 +98,13 @@
     <ClInclude Include="src\config.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\debug_gui.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="shaders\fragment.frag" />
-    <None Include="shaders\postprocess.frag" />
+    <None Include="shaders\pathtrace.frag" />
+    <None Include="shaders\composite.frag" />
     <None Include="shaders\vertex.vert" />
   </ItemGroup>
 </Project>

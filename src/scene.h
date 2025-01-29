@@ -81,7 +81,7 @@ public:
 		float voxel_size = 1. / config::BrickSize;
 
 		util::SlabIntersection bound_hit = util::raySlabIntersection(origin, dir, glm::vec3(0.0f), glm::vec3(brick_map->size));
-		if (!bound_hit.hit) return { false, INFINITY, glm::ivec3(0) };
+		if (!bound_hit.did_hit) return { false, INFINITY, glm::ivec3(0) };
 
 		float tMin = bound_hit.tmin;
 		float tMax = bound_hit.tmax;

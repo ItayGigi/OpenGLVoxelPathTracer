@@ -239,15 +239,15 @@ private:
 					offset = glm::mix(offset, side, 0.8);
 
 					glm::vec3 origin = pos + glm::vec3(offset) * collider_half_width;
-					util::RayHit hit = scene->CastRay(origin, dir, amount);
-					if (hit.hit && hit.dist < min_hit.dist) {
-						min_hit = hit;
+					util::RayHit did_hit = scene->CastRay(origin, dir, amount);
+					if (did_hit.did_hit && did_hit.dist < min_hit.dist) {
+						min_hit = did_hit;
 						hit_normal = -side;
 					}
 				}
 			}
 
-			if (min_hit.hit && min_hit.dist >= 0.0f) {
+			if (min_hit.did_hit && min_hit.dist >= 0.0f) {
 				pos += dir * min_hit.dist + glm::vec3(hit_normal) * 0.0000f;
 
 				amount -= min_hit.dist;
