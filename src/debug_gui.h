@@ -7,6 +7,10 @@
 
 #include <queue>
 #include <vector>
+#include <functional>
+
+#include <windows.h>
+#include <atlstr.h>
 
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
@@ -29,6 +33,8 @@ class DebugGUIWindow {
 
 	std::vector<const char*> _brick_names;
 
+	std::function<void(std::string scene_name, GLFWwindow* window)> _load_scene_callback;
+
 public:
 	// gui variables
 	int selected_output = 0;
@@ -50,6 +56,12 @@ public:
 			glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 			_is_gui_focused = false;
 		}
+
+		if (ImGui::Button("Load Scene")) {
+			tryLoadScene(window);
+		}
+
+		ImGui::Separator();
 
 		_last_frame_times.push(delta_time);
 		_frame_times_sum += delta_time;
@@ -84,9 +96,16 @@ public:
 		_scene = scene;
 		_camera = camera;
 
+		_brick_names.clear();
+		current_brick = 0;
+
 		for (int i = 0; i < scene->bricks.size(); i++) {
 			_brick_names.push_back(scene->bricks[i]->name.c_str());
 		}
+	}
+
+	void SetLoadSceneCallback(std::function<void(std::string scene_name, GLFWwindow* window)> load_scene_callback) {
+		_load_scene_callback = load_scene_callback;
 	}
 
 	void DoFocus(GLFWwindow* window) {
@@ -97,6 +116,29 @@ public:
 
 	bool IsFocused() {
 		return _is_gui_focused;
+	}
+
+private:
+	void tryLoadScene(GLFWwindow* window) {
+		OPENFILENAME ofn;
+		WCHAR file_name[100];
+
+		// open a file name
+		ZeroMemory(&ofn, sizeof(ofn));
+		ofn.lStructSize = sizeof(ofn);
+		ofn.hwndOwner = NULL;
+		ofn.lpstrFile = file_name;
+		ofn.lpstrFile[0] = '\0';
+		ofn.nMaxFile = sizeof(file_name);
+		ofn.nFilterIndex = 1;
+		ofn.lpstrFileTitle = NULL;
+		ofn.nMaxFileTitle = 0;
+		ofn.lpstrInitialDir = NULL;
+		ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
+
+		if (GetOpenFileName(&ofn)) {
+			_load_scene_callback((std::string)CW2A(file_name), window);
+		}
 	}
 };
 

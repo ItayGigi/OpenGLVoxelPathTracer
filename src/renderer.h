@@ -106,6 +106,12 @@ public:
 			return 1;
 		}
 
+		static auto callback_static = [this](std::string name, GLFWwindow* window) {
+			changeScene(name, window);
+			};
+		debug_gui.SetLoadSceneCallback([](std::string name, GLFWwindow* window)	{
+			callback_static(name, window);
+			});
 		debug_gui.SetScene(&scene, &camera);
 		debug_gui.DoFocus(window);
 
@@ -398,6 +404,25 @@ private:
 		camera = Camera(scene->brick_map->camera_start_pos, { {0.0f},{1.0f},{0.0f} }, scene->brick_map->camera_start_angles.y, scene->brick_map->camera_start_angles.x);;
 
 		return true;
+	}
+
+	bool changeScene(std::string scene_name, GLFWwindow* window) {
+		if (!Scene().LoadFromFile(scene_name)) {
+			std::cerr << "Failed to load scene." << std::endl;
+			return false;
+		}
+
+		scene.LoadFromFile(scene_name);
+
+		glDeleteTextures(1, &scene_tex);
+		glDeleteTextures(1, &bricks_tex);
+		glDeleteTextures(1, &mats_tex);
+
+		loadScene(&scene, &scene_tex, &bricks_tex, &mats_tex);
+
+		debug_gui.SetScene(&scene, &camera);
+
+		HandleFramebufferSizeCallback(window, window_width, window_height);
 	}
 
 	void renderGUI(GLFWwindow* window) {

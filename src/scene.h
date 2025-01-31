@@ -44,6 +44,8 @@ public:
 
 		mats_data.resize(brick_paths.size() * 16 * 2);
 
+		bricks.clear();
+
 		for (int i = 0; i < brick_paths.size(); i++)
 		{
 			bricks.push_back(std::unique_ptr<Brick>(new Brick((file_folder + brick_paths[i]).c_str())));

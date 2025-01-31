@@ -146,8 +146,8 @@ public:
 		name = std::string(file_path);
 		int dot_index = name.find_first_of('.');
 		if (dot_index <= name.size()) name = name.substr(0, dot_index);
-		//int seperator_index = name.find_last_of('\\/');
-		//if (seperator_index <= name.size()) name = name.substr(seperator_index+1);
+		int seperator_index = name.find_last_of('\\/');
+		if (seperator_index <= name.size()) name = name.substr(seperator_index+1);
 
 
 		const ogt_vox_model* model = scene->models[0];
