@@ -89,6 +89,13 @@ public:
 	glm::vec3 camera_start_pos;
 	glm::vec3 camera_start_angles;
 
+	BrickMap() {
+		env_color = glm::vec3(0.f);
+		camera_start_pos = glm::vec3(0.f);
+		camera_start_angles = glm::vec3(0.f);
+		size = glm::ivec3(0);
+	}
+
 	// read brickmap from MagicaVoxel file
 	BrickMap(const char* file_path) {
 		const ogt_vox_scene* scene = readScene_(file_path);

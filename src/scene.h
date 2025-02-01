@@ -25,13 +25,14 @@ public:
 		// map
 		std::string brickmap_path;
 		scene_file >> brickmap_path;
-		brick_map = std::unique_ptr<BrickMap>(new BrickMap((file_folder + brickmap_path).c_str()));
-		if (brick_map->data.empty()) return false; // failed to load brickmap
+
+		BrickMap* new_map = new BrickMap((file_folder + brickmap_path).c_str());
+		if (new_map->data.empty()) return false; // failed to load brickmap
 
 		std::string sky_setting;
 		scene_file >> sky_setting;
 
-		if (sky_setting == "sky") brick_map->env_color = glm::vec3(-1);
+		if (sky_setting == "sky") new_map->env_color = glm::vec3(-1);
 		else if (sky_setting != "color") {
 			std::cout << "Input sky setting \'" << sky_setting << "\' is invalid. Expected \'color\' or \'sky\'.\n";
 			return false;
@@ -42,17 +43,25 @@ public:
 		while (scene_file >> next_brick_path)
 			brick_paths.push_back(next_brick_path);
 
-		mats_data.resize(brick_paths.size() * 16 * 2);
-
-		bricks.clear();
+		std::vector<Brick*> new_bricks;
 
 		for (int i = 0; i < brick_paths.size(); i++)
 		{
-			bricks.push_back(std::unique_ptr<Brick>(new Brick((file_folder + brick_paths[i]).c_str())));
+			new_bricks.push_back(new Brick((file_folder + brick_paths[i]).c_str()));
 
-			Brick* brick = bricks.back().get();
+			Brick* brick = new_bricks.back();
 
 			if (brick->data.empty()) return false; // failed to load brick
+		}
+
+		brick_map = std::unique_ptr<BrickMap>(new_map);
+		bricks.clear();
+		mats_data.resize(brick_paths.size() * 16 * 2);
+
+		for (int i = 0; i < brick_paths.size(); i++)
+		{
+			bricks.push_back(std::unique_ptr<Brick>(new_bricks[i]));
+			Brick* brick = bricks.back().get();
 
 			for (int j = 1; j < brick->mats.size(); j++) // load all brick's materials
 			{
@@ -62,6 +71,14 @@ public:
 		}
 
 		return true;
+	}
+
+	void LoadEmpty() {
+		brick_map = std::unique_ptr<BrickMap>(new BrickMap());
+
+		mats_data.clear();
+
+		bricks.clear();
 	}
 
 	bool IsPositionOccupied(const glm::vec3 pos) {

@@ -93,11 +93,11 @@ public:
 
 		// load scene
 		if (argc < 2) {
-			std::cerr << "Scene name expected as an argument. Exiting." << std::endl;
-			return 2;
+			std::cerr << "Scene name expected as an argument. Initializing Empty Scene." << std::endl;
+			scene.LoadEmpty();
+			loadScene(&scene, &scene_tex, &bricks_tex, &mats_tex);
 		}
-
-		if (!scene.LoadFromFile(argv[1]) || !loadScene(&scene, &scene_tex, &bricks_tex, &mats_tex)) {
+		else if (!scene.LoadFromFile(argv[1]) || !loadScene(&scene, &scene_tex, &bricks_tex, &mats_tex)) {
 			std::cerr << "Failed to load scene. Exiting." << std::endl;
 			glDeleteTextures(1, &scene_tex);
 			glDeleteTextures(1, &bricks_tex);
@@ -258,11 +258,14 @@ public:
 	// glfw: whenever the mouse scroll wheel scrolls, this callback is called
 	void HandleScrollCallback(GLFWwindow* window, double x_offset, double y_offset)
 	{
+		if (debug_gui.IsFocused()) return;
 		camera.ProcessMouseScroll(static_cast<float>(y_offset));
 	}
 
 	void HandleMouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
-		if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS && !debug_gui.IsFocused()) {
+		if (debug_gui.IsFocused()) return;
+
+		if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
 			glm::ivec3 selected_brick;
 			if (!rayCastSelectedBrick(selected_brick).did_hit) return;
 
@@ -274,7 +277,7 @@ public:
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_R32UI, scene.brick_map->size.x * scene.brick_map->size.y / 8, scene.brick_map->size.z, 0, GL_RED_INTEGER, GL_UNSIGNED_INT, scene.brick_map->data.data());
 		}
 
-		if (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_PRESS && !debug_gui.IsFocused()) {
+		if (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_PRESS) {
 			glm::ivec3 selected_brick;
 			util::RayHit selected_hit = rayCastSelectedBrick(selected_brick);
 			if (!selected_hit.did_hit) return;
@@ -332,6 +335,8 @@ private:
 	{
 		if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
 			glfwSetWindowShouldClose(window, true);
+
+		if (debug_gui.IsFocused()) return;
 
 		if (glfwGetKey(window, GLFW_KEY_LEFT_ALT) == GLFW_PRESS) {
 			debug_gui.DoFocus(window);
@@ -407,12 +412,10 @@ private:
 	}
 
 	bool changeScene(std::string scene_name, GLFWwindow* window) {
-		if (!Scene().LoadFromFile(scene_name)) {
+		if (!scene.LoadFromFile(scene_name)) {
 			std::cerr << "Failed to load scene." << std::endl;
 			return false;
 		}
-
-		scene.LoadFromFile(scene_name);
 
 		glDeleteTextures(1, &scene_tex);
 		glDeleteTextures(1, &bricks_tex);
