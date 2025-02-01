@@ -85,7 +85,7 @@ protected:
 class BrickMap : public VoxelGrid
 {
 public:
-	glm::vec3 env_color;
+	glm::vec3 env_color = glm::vec3(-1.f);
 	glm::vec3 camera_start_pos;
 	glm::vec3 camera_start_angles;
 

@@ -27,7 +27,10 @@ public:
 		scene_file >> brickmap_path;
 
 		BrickMap* new_map = new BrickMap((file_folder + brickmap_path).c_str());
-		if (new_map->data.empty()) return false; // failed to load brickmap
+		if (new_map->env_color == glm::vec3(-1.f)) { // failed to load brickmap
+			delete new_map;
+			return false;
+		}
 
 		std::string sky_setting;
 		scene_file >> sky_setting;
@@ -35,6 +38,7 @@ public:
 		if (sky_setting == "sky") new_map->env_color = glm::vec3(-1);
 		else if (sky_setting != "color") {
 			std::cout << "Input sky setting \'" << sky_setting << "\' is invalid. Expected \'color\' or \'sky\'.\n";
+			delete new_map;
 			return false;
 		}
 
@@ -51,7 +55,11 @@ public:
 
 			Brick* brick = new_bricks.back();
 
-			if (brick->data.empty()) return false; // failed to load brick
+			if (brick->data.empty()) { // failed to load brick
+				delete new_map;
+				for (Brick* brick : new_bricks) delete brick;
+				return false;
+			}
 		}
 
 		brick_map = std::unique_ptr<BrickMap>(new_map);
