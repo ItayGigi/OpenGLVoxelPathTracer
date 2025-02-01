@@ -102,6 +102,9 @@ public:
 		for (int i = 0; i < scene->bricks.size(); i++) {
 			_brick_names.push_back(scene->bricks[i]->name.c_str());
 		}
+
+		_frame_times_sum = 0.f;
+		while (!_last_frame_times.empty()) _last_frame_times.pop();
 	}
 
 	void SetLoadSceneCallback(std::function<void(std::string scene_name, GLFWwindow* window)> load_scene_callback) {

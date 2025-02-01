@@ -421,6 +421,8 @@ private:
 		glDeleteTextures(1, &bricks_tex);
 		glDeleteTextures(1, &mats_tex);
 
+		frame_count = 0;
+
 		loadScene(&scene, &scene_tex, &bricks_tex, &mats_tex);
 
 		debug_gui.SetScene(&scene, &camera);
