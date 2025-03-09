@@ -131,6 +131,8 @@ public:
 
 		processInput(window);
 
+		if (debug_gui.CriticalVariablesChanged()) HandleFramebufferSizeCallback(window, window_width, window_height);
+
 		renderPathTrace(fbo1, buffer_textures2);
 		renderComposite(0, buffer_textures1); // render to screen
 
@@ -460,6 +462,8 @@ private:
 		shader->setTexture("HistoryTex", last_frame_textures[HISTORY_TEXTURE], 5 + HISTORY_TEXTURE);
 		shader->setTexture("LastDepthTex", last_frame_textures[DEPTH_TEXTURE], 5 + DEPTH_TEXTURE);
 		shader->setTexture("LastNormalTex", last_frame_textures[NORMAL_TEXTURE], 5 + NORMAL_TEXTURE);
+
+		shader->setFloat("SunStrength", debug_gui.sun_strength);
 
 		glBindVertexArray(vao);
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);

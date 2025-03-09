@@ -30,6 +30,7 @@ uniform usampler2DArray BricksTex;
 uniform usampler2D MatsTex;
 
 uniform vec3 EnvironmentColor;
+uniform float SunStrength;
 
 #define BRICK_RES 8
 #define EPSILON 0.00001
@@ -109,9 +110,9 @@ vec3 GetSky(vec3 dir) {
 		return EnvironmentColor;
 
 	vec3 sky = clamp(exp2(-dir.y / vec3(.35, .45, .6)), 0., 1.);
-	vec3 sun = clamp(pow(dot(normalize(vec3(1., 2., 1.)), dir), 200), 0., 1.) * vec3(1., 0.8, 0.4) * 70.;
+	//vec3 sun = clamp(pow(dot(normalize(vec3(1., 2., 1.)), dir), 200), 0., 1.) * vec3(1., 0.8, 0.4) * 70.;
 
-	return sky + sun;
+	return sky;
 }
 
 vec4 TestBrick(int brick, vec2 coords) {
@@ -261,6 +262,7 @@ GridHit RaySceneIntersection(Ray ray, vec3 gridPos, float gridScale, int limit) 
 }
 
 vec3 Trace(Ray ray, GridHit firstHit) {
+	float sunChance = 1. - 1. / pow(SunStrength + 1., 0.1);
 	vec3 rayColor = vec3(1.);
 	vec3 incomingLight = vec3(0.);
 
@@ -284,6 +286,17 @@ vec3 Trace(Ray ray, GridHit firstHit) {
 		}
 
 		ray.origin += ray.dir * hitInfo.dist + hitInfo.normal * EPSILON;
+
+		if (rand() < sunChance*pow(hitInfo.mat.roughness, 3)){ // sun ray
+			vec3 lastdir = ray.dir;
+
+			ray.dir = normalize(vec3(0.5, 0.7, 0.3));
+			ray.inverse_dir = 1.0 / ray.dir;
+
+			if (!RaySceneIntersection(ray, vec3(0.), 1., int(MapSize.x + MapSize.y + MapSize.z)).hit) return incomingLight + rayColor * vec3(SunStrength);
+
+			ray.dir = lastdir;
+		}
 
 		vec3 diffuseDir = CosWeightedRandomHemisphereDirection(hitInfo.normal);
 

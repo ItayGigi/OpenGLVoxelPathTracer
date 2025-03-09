@@ -23,6 +23,7 @@
 class DebugGUIWindow {
 	bool _is_gui_focused = false;
 	bool _do_next_gui_focus = false;
+	float _last_sun_strength = 0.f;
 
 	// fps
 	float _frame_times_sum = 0.0f;
@@ -41,8 +42,11 @@ public:
 	float gamma = config::Gamma;
 	int blur_size = config::BlurSize;
 	int current_brick = 0;
+	float sun_strength =  0.f;
 
 	void Draw(GLFWwindow* window, float delta_time, int frame_count) {
+		_last_sun_strength = sun_strength;
+
 		ImGui::SetNextWindowPos({ 0, 0 });
 
 		ImGui::Begin("Debug Window", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
@@ -84,6 +88,7 @@ public:
 		ImGui::Combo("Current Brick", &current_brick, _brick_names.data(), _brick_names.size());
 
 		if (ImGui::CollapsingHeader("Visuals")) {
+			ImGui::SliderFloat("Sun Strength", &sun_strength, 0.0, 10.0);
 			ImGui::SliderFloat("Gamma", &gamma, 1.0f, 5.0f);
 			ImGui::SliderInt("Blur Radius", &blur_size, 0, 10);
 			ImGui::Combo("Output", &selected_output, config::OutputNames, IM_ARRAYSIZE(config::OutputNames));
@@ -119,6 +124,10 @@ public:
 
 	bool IsFocused() {
 		return _is_gui_focused;
+	}
+
+	bool CriticalVariablesChanged() {
+		return _last_sun_strength != sun_strength;
 	}
 
 private:
