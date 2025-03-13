@@ -11,6 +11,7 @@ public:
 	std::unique_ptr<BrickMap> brick_map;
 	std::vector<std::unique_ptr<Brick>> bricks;
 	std::vector<uint32_t> mats_data;
+	float sun_strength;
 
 	bool LoadFromFile(const std::string path) {
 		std::ifstream scene_file(path);
@@ -35,7 +36,16 @@ public:
 		std::string sky_setting;
 		scene_file >> sky_setting;
 
-		if (sky_setting == "sky") new_map->env_color = glm::vec3(-1);
+		sun_strength = 0.0f;
+		if (sky_setting == "sky") {
+			new_map->env_color = glm::vec3(-1);
+			scene_file >> sun_strength;
+			if (scene_file.fail()) {
+				std::cout << "Expected sun strength after sky keyword.\n";
+				delete new_map;
+				return false;
+			}
+		}
 		else if (sky_setting != "color") {
 			std::cout << "Input sky setting \'" << sky_setting << "\' is invalid. Expected \'color\' or \'sky\'.\n";
 			delete new_map;

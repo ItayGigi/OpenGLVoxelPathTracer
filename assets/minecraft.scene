@@ -1,6 +1,6 @@
 minecraft.vox
 
-sky
+sky 7
 
 bricks/minecraft/white_concrete.vox
 bricks/minecraft/blue_wool.vox
@@ -10,3 +10,4 @@ bricks/minecraft/orange_wool.vox
 bricks/minecraft/red_wool.vox
 bricks/minecraft/yellow_wool.vox
 bricks/minecraft/light.vox
+bricks/mirror.vox

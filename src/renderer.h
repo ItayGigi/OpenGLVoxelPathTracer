@@ -106,6 +106,8 @@ public:
 			return 1;
 		}
 
+		debug_gui.sun_strength = scene.sun_strength;
+
 		static auto callback_static = [this](std::string name, GLFWwindow* window) {
 			changeScene(name, window);
 			};
@@ -419,6 +421,8 @@ private:
 			return false;
 		}
 
+		debug_gui.sun_strength = scene.sun_strength;
+
 		glDeleteTextures(1, &scene_tex);
 		glDeleteTextures(1, &bricks_tex);
 		glDeleteTextures(1, &mats_tex);
@@ -464,6 +468,7 @@ private:
 		shader->setTexture("LastNormalTex", last_frame_textures[NORMAL_TEXTURE], 5 + NORMAL_TEXTURE);
 
 		shader->setFloat("SunStrength", debug_gui.sun_strength);
+		shader->setFloat("SunAngle", debug_gui.sun_angle);
 
 		glBindVertexArray(vao);
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);

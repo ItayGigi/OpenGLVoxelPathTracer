@@ -31,6 +31,9 @@ uniform usampler2D MatsTex;
 
 uniform vec3 EnvironmentColor;
 uniform float SunStrength;
+uniform float SunAngle;
+
+vec3 SunDirection;
 
 #define BRICK_RES 8
 #define EPSILON 0.00001
@@ -75,6 +78,18 @@ vec3 CosWeightedRandomHemisphereDirection(const vec3 n) {
 	return normalize(rr);
 }
 
+vec3 RandomPointInCircle(const vec3 n){
+	vec3 uu = normalize(cross(n, vec3(0.0, 1.0, 1.0)));
+	vec3 vv = cross(uu, n);
+
+	float t = 2.0 * 3.14159 * rand();
+	float r = rand() + rand();
+	if(r > 1.)
+		r = 2.0 - r;
+	
+	return r*(uu * cos(t) + vv * sin(t));
+}
+
 struct Ray {
 	vec3 origin;
 	vec3 dir;
@@ -110,9 +125,9 @@ vec3 GetSky(vec3 dir) {
 		return EnvironmentColor;
 
 	vec3 sky = clamp(exp2(-dir.y / vec3(.35, .45, .6)), 0., 1.);
-	//vec3 sun = clamp(pow(dot(normalize(vec3(1., 2., 1.)), dir), 200), 0., 1.) * vec3(1., 0.8, 0.4) * 70.;
+	vec3 sun = clamp(pow(dot(SunDirection, dir), 700), 0., 1.) * vec3(1., 0.8, 0.4);
 
-	return sky;
+	return sky + sun;
 }
 
 vec4 TestBrick(int brick, vec2 coords) {
@@ -275,8 +290,9 @@ vec3 Trace(Ray ray, GridHit firstHit) {
 			hitInfo = RaySceneIntersection(ray, vec3(0.), 1., limit);
 
 		if(!hitInfo.hit) {
-			if(hitInfo.dist < 0.)
+			if(hitInfo.dist < 0.){
 				return incomingLight + rayColor * GetSky(ray.dir);
+			}
 			return vec3(0.);
 		}
 
@@ -290,7 +306,7 @@ vec3 Trace(Ray ray, GridHit firstHit) {
 		if (rand() < sunChance*pow(hitInfo.mat.roughness, 3)){ // sun ray
 			vec3 lastdir = ray.dir;
 
-			ray.dir = normalize(vec3(0.5, 0.7, 0.3));
+			ray.dir = normalize(SunDirection + 0.02*RandomPointInCircle(SunDirection));
 			ray.inverse_dir = 1.0 / ray.dir;
 
 			if (!RaySceneIntersection(ray, vec3(0.), 1., int(MapSize.x + MapSize.y + MapSize.z)).hit) return incomingLight + rayColor * vec3(SunStrength);
@@ -303,6 +319,7 @@ vec3 Trace(Ray ray, GridHit firstHit) {
 		vec3 specularDir = reflect(ray.dir, vec3(hitInfo.normal));
 
 		ray.dir = normalize(mix(specularDir, diffuseDir, hitInfo.mat.roughness));
+
 		ray.inverse_dir = 1.0 / ray.dir;
 
 		limit = int(pow(limit, max(0.87, 1. / (i + 1))));
@@ -409,6 +426,7 @@ void main() {
 	// }
 
 	INIT_RNG;
+	SunDirection = normalize(vec3(0.6 * cos(SunAngle/360.*6.2831), 1.0, 0.6 * sin(SunAngle/ 360. * 6.2831)));
 
 	float aspect = float(Resolution.x) / float(Resolution.y);
 
