@@ -390,7 +390,7 @@ SamplePoint FindBestSample(GridHit hit, Ray ray) {
 		float roughness = texture(LastRoughnessTex, currCoord, 0).r;
 
 		if(normal == hit.normal) {
-			float value = dist*(10. + pow(abs(texture(LastRoughnessTex, bestCoord, 0).r - hit.mat.roughness), 0.3));
+			float value = dist * mix(1., pow(abs(texture(LastRoughnessTex, currCoord, 0).r - hit.mat.roughness), 0.3), 0.2);
 			if(value < bestDist) {
 				bestDist = value;
 				bestCoord = currCoord;
@@ -404,7 +404,7 @@ SamplePoint FindBestSample(GridHit hit, Ray ray) {
 		}
 	}
 
-	float accuracy = 1. - pow(abs(texture(LastRoughnessTex, bestCoord, 0).r - hit.mat.roughness), 0.3);
+	float accuracy = 1. - pow(abs(texture(LastRoughnessTex, bestCoord, 0).r - hit.mat.roughness), 0.5);
 
 	vec2 lastScreenPos = WorldToLastScreenCoord(hitPos);
 	if(min(max(lastScreenPos, vec2(-1.)), vec2(1.)) != lastScreenPos)
