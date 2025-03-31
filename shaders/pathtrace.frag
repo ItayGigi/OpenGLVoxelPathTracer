@@ -6,12 +6,14 @@ layout(location = 2) out float FragDepth;
 layout(location = 3) out vec3 FragAlbedo;
 layout(location = 4) out ivec3 FragNormal;
 layout(location = 5) out float FragEmission;
+layout(location = 6) out float FragRoughness;
 
 in vec2 TexCoord;
 uniform sampler2D LastFrameTex;
 uniform sampler2D HistoryTex;
 uniform sampler2D LastDepthTex;
 uniform isampler2D LastNormalTex;
+uniform sampler2D LastRoughnessTex;
 
 uniform uvec2 Resolution;
 uniform uint FrameCount;
@@ -385,22 +387,24 @@ SamplePoint FindBestSample(GridHit hit, Ray ray) {
 		vec3 actualPos = LastCamPosition + normalize(currPos - LastCamPosition) * texture(LastDepthTex, currCoord, 0).r;
 		float dist = distance(hitPos, actualPos);
 		ivec3 normal = texture(LastNormalTex, currCoord, 0).rgb;
+		float roughness = texture(LastRoughnessTex, currCoord, 0).r;
 
 		if(normal == hit.normal) {
-			if(dist < bestDist) {
-				bestDist = dist;
+			float value = dist*(10. + pow(abs(texture(LastRoughnessTex, bestCoord, 0).r - hit.mat.roughness), 0.3));
+			if(value < bestDist) {
+				bestDist = value;
 				bestCoord = currCoord;
 			}
 
 			float maxDist = 0.08;
-			float weight = pow(max(maxDist - dist, 0.) / maxDist, 4);
+			float weight = pow(max(maxDist - dist, 0.) / maxDist, 4.) * pow(1. - abs(roughness - hit.mat.roughness), 2.);
 
 			colorSum += weight * texture(LastFrameTex, currCoord).rgb;
 			matchCount += weight;
 		}
 	}
 
-	float accuracy = 1.;
+	float accuracy = 1. - pow(abs(texture(LastRoughnessTex, bestCoord, 0).r - hit.mat.roughness), 0.3);
 
 	vec2 lastScreenPos = WorldToLastScreenCoord(hitPos);
 	if(min(max(lastScreenPos, vec2(-1.)), vec2(1.)) != lastScreenPos)
@@ -415,7 +419,9 @@ SamplePoint FindBestSample(GridHit hit, Ray ray) {
 	if(hit.mat.roughness < 1.)
 		weight = mix(weight, 1., 0.97);
 
-	return SamplePoint(bestDist, history, mix(colorSum / max(matchCount, 1.), texture(LastFrameTex, bestCoord).rgb, weight), accuracy);
+	if (matchCount == 0.) matchCount = 1.;
+
+	return SamplePoint(bestDist, history, mix(colorSum / matchCount, texture(LastFrameTex, bestCoord).rgb, weight), accuracy);
 }
 
 void main() {
@@ -472,6 +478,7 @@ void main() {
 		FragAlbedo = vec3(1.);
 
 	FragEmission = firstHit.mat.emission;
+	FragRoughness = firstHit.mat.roughness;
 
 	FragColor = mix(sample.color, color, 1.0 / (pow(FragHistory, 0.97)));
 	return;

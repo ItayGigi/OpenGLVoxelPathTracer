@@ -32,6 +32,7 @@ enum BufferTexture {
 	ALBEDO_TEXTURE,
 	NORMAL_TEXTURE,
 	EMISSION_TEXTURE,
+	ROUGHNESS_TEXTURE,
 };
 
 class Renderer
@@ -57,7 +58,7 @@ class Renderer
 
 	// frame buffers
 	unsigned int fbo1, fbo2;
-	unsigned int buffer_textures1[6], buffer_textures2[6];
+	unsigned int buffer_textures1[7], buffer_textures2[7];
 
 	unsigned int scene_tex, bricks_tex, mats_tex;
 
@@ -93,12 +94,12 @@ public:
 
 		// load scene
 		if (argc < 2) {
-			std::cerr << "Scene name expected as an argument. Initializing Empty Scene." << std::endl;
+			config::PrintInfo("Scene name expected as an argument. Initializing Empty Scene");
 			scene.LoadEmpty();
 			loadScene(&scene, &scene_tex, &bricks_tex, &mats_tex);
 		}
 		else if (!scene.LoadFromFile(argv[1]) || !loadScene(&scene, &scene_tex, &bricks_tex, &mats_tex)) {
-			std::cerr << "Failed to load scene. Exiting." << std::endl;
+			config::PrintError("Failed to load scene. Exiting");
 			glDeleteTextures(1, &scene_tex);
 			glDeleteTextures(1, &bricks_tex);
 			glDeleteTextures(1, &mats_tex);
@@ -175,7 +176,7 @@ public:
 			glDeleteTextures(1, &buffer_textures2[i]);
 		}
 
-		unsigned int attachments[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3, GL_COLOR_ATTACHMENT4, GL_COLOR_ATTACHMENT5 };
+		unsigned int attachments[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3, GL_COLOR_ATTACHMENT4, GL_COLOR_ATTACHMENT5, GL_COLOR_ATTACHMENT6 };
 
 		for (int i = 0; i < 2; i++)
 		{
@@ -219,8 +220,12 @@ public:
 			glBindTexture(GL_TEXTURE_2D, buffer_textures1[EMISSION_TEXTURE]);
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, window_width, window_height, 0, GL_RED, GL_FLOAT, NULL);
 
+			glActiveTexture(GL_TEXTURE0 + 5 + ROUGHNESS_TEXTURE);
+			glBindTexture(GL_TEXTURE_2D, buffer_textures1[ROUGHNESS_TEXTURE]);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, window_width, window_height, 0, GL_RED, GL_FLOAT, NULL);
+
 			if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-				std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
+				config::PrintError("Framebuffer is not complete!");
 
 			glDrawBuffers(sizeof(attachments) / sizeof(unsigned int), attachments);
 
@@ -417,7 +422,7 @@ private:
 
 	bool changeScene(std::string scene_name, GLFWwindow* window) {
 		if (!scene.LoadFromFile(scene_name)) {
-			std::cerr << "Failed to load scene." << std::endl;
+			config::PrintError("Failed to load scene");
 			return false;
 		}
 
@@ -466,6 +471,7 @@ private:
 		shader->setTexture("HistoryTex", last_frame_textures[HISTORY_TEXTURE], 5 + HISTORY_TEXTURE);
 		shader->setTexture("LastDepthTex", last_frame_textures[DEPTH_TEXTURE], 5 + DEPTH_TEXTURE);
 		shader->setTexture("LastNormalTex", last_frame_textures[NORMAL_TEXTURE], 5 + NORMAL_TEXTURE);
+		shader->setTexture("LastRoughnessTex", last_frame_textures[ROUGHNESS_TEXTURE], 5 + ROUGHNESS_TEXTURE);
 
 		shader->setFloat("SunStrength", debug_gui.sun_strength);
 		shader->setFloat("SunAngle", debug_gui.sun_angle);
@@ -490,6 +496,7 @@ private:
 		post_process_shader->setTexture("NormalTex", path_traced_textures[NORMAL_TEXTURE], 5 + NORMAL_TEXTURE);
 		post_process_shader->setTexture("DepthTex", path_traced_textures[DEPTH_TEXTURE], 5 + DEPTH_TEXTURE);
 		post_process_shader->setTexture("HistoryTex", path_traced_textures[HISTORY_TEXTURE], 5 + HISTORY_TEXTURE);
+		post_process_shader->setTexture("RoughnessTex", path_traced_textures[ROUGHNESS_TEXTURE], 5 + ROUGHNESS_TEXTURE);
 
 		glBindVertexArray(vao);
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);

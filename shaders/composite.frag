@@ -15,6 +15,7 @@ uniform sampler2D EmissionTex;
 uniform sampler2D HistoryTex;
 uniform isampler2D NormalTex;
 uniform sampler2D DepthTex;
+uniform sampler2D RoughnessTex;
 
 vec3 ACES(const vec3 x) {
 	const float a = 2.51;
@@ -36,6 +37,7 @@ vec4 averageSample(sampler2D tex, ivec2 loc) {
 vec4 boxBlurIllumination(ivec2 loc, int size, int seperation) {
 	vec4 accu = vec4(0.);
 	ivec4 normal = texelFetch(NormalTex, loc, 0);
+	float roughness = texelFetch(RoughnessTex, loc, 0).r;
 	float depth = texelFetch(DepthTex, loc, 0).r;
 	int sampleCount = 0;
 
@@ -43,8 +45,11 @@ vec4 boxBlurIllumination(ivec2 loc, int size, int seperation) {
 		for(int j = -size; j <= size; j++) {
 			ivec2 currLoc = loc + ivec2(i, j) * seperation;
 
-			if(texelFetch(NormalTex, currLoc, 0) == normal &&
-				abs(texelFetch(DepthTex, currLoc, 0).r - depth) < 0.1) {
+			if (
+				texelFetch(NormalTex, currLoc, 0) == normal &&
+				texelFetch(RoughnessTex, currLoc, 0).r == roughness &&
+				abs(texelFetch(DepthTex, currLoc, 0).r - depth) < 0.1)
+			{
 				sampleCount++;
 				accu += texelFetch(Texture, currLoc, 0);
 			}
@@ -61,6 +66,8 @@ void main() {
 
 	vec3 incomingLight = boxBlurIllumination(pixelLoc, BlurSize, 2).rgb;//texelFetch(Texture, pixelLoc, 0).rgb;
 	float emission = texelFetch(EmissionTex, pixelLoc, 0).r;
+
+	float roughness = texelFetch(RoughnessTex, pixelLoc, 0).r;
 
 	switch(OutputNum) {
 		case 0: // Result
@@ -80,15 +87,19 @@ void main() {
 			FragColor = vec3(emission);
 			return;
 
-		case 5: // Normal
+		case 5: // Roughness
+			FragColor = vec3(roughness);
+			return;
+
+		case 6: // Normal
 			FragColor = texelFetch(NormalTex, pixelLoc, 0).rgb;
 			return;
 
-		case 6: // Depth
+		case 7: // Depth
 			FragColor = texelFetch(DepthTex, pixelLoc, 0).rrr / 10.;
 			return;
 
-		case 7: // History
+		case 8: // History
 			FragColor = texelFetch(HistoryTex, pixelLoc, 0).rrr / 100.;
 			return;
 	}

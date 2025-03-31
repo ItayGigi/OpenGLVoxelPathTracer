@@ -3,6 +3,7 @@
 
 #include "brick.h"
 #include "mathutil.h"
+#include "config.h"
 
 #include <vector>
 
@@ -17,7 +18,7 @@ public:
 		std::ifstream scene_file(path);
 
 		if (!scene_file) {
-			std::cout << "Scene file \'" << path << "\' not found.\n";
+			config::PrintError("Scene file \'", path, "\' not found");
 			return false;
 		}
 
@@ -41,13 +42,13 @@ public:
 			new_map->env_color = glm::vec3(-1);
 			scene_file >> sun_strength;
 			if (scene_file.fail()) {
-				std::cout << "Expected sun strength after sky keyword.\n";
+				config::PrintError("Expected sun strength after sky keyword");
 				delete new_map;
 				return false;
 			}
 		}
 		else if (sky_setting != "color") {
-			std::cout << "Input sky setting \'" << sky_setting << "\' is invalid. Expected \'color\' or \'sky\'.\n";
+			config::PrintError("Input sky setting \'", sky_setting, "\' is invalid. Expected \'color\' or \'sky\'");
 			delete new_map;
 			return false;
 		}
@@ -56,6 +57,12 @@ public:
 		std::string next_brick_path;
 		while (scene_file >> next_brick_path)
 			brick_paths.push_back(next_brick_path);
+
+		if (brick_paths.size() < new_map->brick_amount) {
+			config::PrintError("Brickmap file contains ", new_map->brick_amount, " bricks, but only ", brick_paths.size(), " brick files were given");
+			delete new_map;
+			return false;
+		}
 
 		std::vector<Brick*> new_bricks;
 

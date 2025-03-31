@@ -2,6 +2,7 @@
 #define CONFIG_H
 
 #include <string>
+#include <iostream>
 #include <glm\glm.hpp>
 
 namespace config {
@@ -18,7 +19,7 @@ namespace config {
 
 	const bool			VSYNC = false;
 
-	const char*			OutputNames[8] = { "Result", "Composite", "Illumination", "Albedo", "Emission", "Normal", "Depth", "History" };
+	const char*			OutputNames[9] = { "Result", "Composite", "Illumination", "Albedo", "Emission", "Roughness", "Normal", "Depth", "History"};
 	const unsigned int	FPSAverageAmount = 80;
 
 	const float			MaxHighlightDistance = 8.;
@@ -30,6 +31,26 @@ namespace config {
 
 	const float			Gamma = 2.2f;
 	const int			BlurSize = 1;
+
+
+	template <class Args>
+	static void PrintArgs_(Args args, std::ostream& stream) {
+		stream << args << " ";
+	}
+
+	template<class... Args>
+	void PrintError(Args... args) {
+		std::cerr << "ERROR: ";
+		int dummy[] = { 0, ((void)PrintArgs_(std::forward<Args>(args), std::cerr), 0)... };
+		std::cerr << std::endl;
+	}
+
+	template<class... Args>
+	void PrintInfo(Args... args) {
+		std::cout << "INFO: ";
+		int dummy[] = { 0, ((void)PrintArgs_(std::forward<Args>(args), std::cout), 0)... };
+		std::cout << std::endl;
+	}
 }
 
 #endif

@@ -44,7 +44,7 @@ protected:
 		FILE* fp;
 
 		if ((err = fopen_s(&fp, file_path, "rb")) != 0) {
-			std::cerr << "cannot open file " << file_path << std::endl;
+			config::PrintError("Cannot open file ", file_path);
 			return nullptr;
 		}
 
@@ -88,12 +88,14 @@ public:
 	glm::vec3 env_color = glm::vec3(-1.f);
 	glm::vec3 camera_start_pos;
 	glm::vec3 camera_start_angles;
+	unsigned int brick_amount;
 
 	BrickMap() {
 		env_color = glm::vec3(0.f);
 		camera_start_pos = glm::vec3(0.f);
 		camera_start_angles = glm::vec3(0.f);
 		size = glm::ivec3(0);
+		brick_amount = 0;
 	}
 
 	// read brickmap from MagicaVoxel file
@@ -106,13 +108,10 @@ public:
 		size = glm::ivec3(model->size_x, model->size_z, model->size_y);
 
 		if (size.y % 8 != 0) {
-			std::cerr << file_path << ": brickmap's height has to be a multiple of 8." << std::endl;
+			config::PrintError(file_path, ": brickmap's height has to be a multiple of 8.");
 			ogt_vox_destroy_scene(scene);
 			return;
 		}
-
-		data = std::vector<uint32_t>(size.x * size.y * size.z / 8);
-		encodeData_(model->voxel_data, size.x, size.y, size.z);
 
 		env_color = glm::vec3(scene->palette.color[255].r, scene->palette.color[255].g, scene->palette.color[255].b) * scene->materials.matl[255].emit * (float)pow(10, scene->materials.matl[255].flux) / 255.0f;
 
@@ -124,6 +123,13 @@ public:
 			sin(glm::radians(camera_start_angles.x)),
 			cos(glm::radians(camera_start_angles.x)) * cos(glm::radians(camera_start_angles.y)));
 		camera_start_pos = glm::vec3(vox_cam.focus[0] + (float)size.x / 2.0f, vox_cam.focus[2], vox_cam.focus[1] + (float)size.z / 2.0f) - glm::vec3(vox_cam.radius) * cam_front;
+
+		brick_amount = *std::max_element(model->voxel_data, model->voxel_data + size.x * size.y * size.z);
+
+		data = std::vector<uint32_t>(size.x * size.y * size.z / 8);
+		encodeData_(model->voxel_data, size.x, size.y, size.z);
+
+		ogt_vox_destroy_scene(scene);
 	}
 };
 
@@ -160,7 +166,7 @@ public:
 		const ogt_vox_model* model = scene->models[0];
 
 		if (model->size_x != config::BrickSize || model->size_y != config::BrickSize || model->size_z != config::BrickSize) {
-			std::cerr << file_path << ": model dimensions mismatch" << std::endl;
+			config::PrintError(file_path, ": model dimensions mismatch");
 			ogt_vox_destroy_scene(scene);
 			return;
 		}

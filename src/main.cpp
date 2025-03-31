@@ -1,3 +1,4 @@
+#include <iostream>
 #include <glad/glad.h> 
 #include <GLFW/glfw3.h>
 #include "config.h"
@@ -21,7 +22,7 @@ int main(int argc, const char* argv[]) {
 	GLFWwindow* window = glfwCreateWindow(config::WindowStartWidth, config::WindowStartHeight, config::WindowName, NULL, NULL);
 	if (window == NULL)
 	{
-		std::cout << "Failed to create GLFW window" << std::endl;
+		config::PrintError("Failed to create GLFW window");
 		glfwTerminate();
 		return -1;
 	}
@@ -35,7 +36,7 @@ int main(int argc, const char* argv[]) {
 	// initialize glad
 	if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
 	{
-		std::cout << "Failed to initialize GLAD" << std::endl;
+		config::PrintError("Failed to initialize GLAD");
 		glfwTerminate();
 		return -1;
 	}
