@@ -4,11 +4,6 @@
 #include "config.h"
 #include "renderer.h"
 
-void framebufferSizeCallback(GLFWwindow* window, int width, int height);
-void mouseCallback(GLFWwindow* window, double x_pos, double y_pos);
-void scrollCallback(GLFWwindow* window, double x_offset, double y_offset);
-void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
-
 Renderer renderer;
 
 int main(int argc, const char* argv[]) {
@@ -28,10 +23,19 @@ int main(int argc, const char* argv[]) {
 	}
 
 	glfwMakeContextCurrent(window);
-	glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
-	glfwSetCursorPosCallback(window, mouseCallback);
-	glfwSetScrollCallback(window, scrollCallback);
-	glfwSetMouseButtonCallback(window, mouseButtonCallback);
+
+	glfwSetFramebufferSizeCallback(window,
+		[](GLFWwindow* window, int width, int height) {
+			renderer.HandleFramebufferSizeCallback(window, width, height); });
+	glfwSetCursorPosCallback(window,
+		[](GLFWwindow* window, double x_pos_in, double y_pos_in) {
+			renderer.HandleMouseCallback(window, x_pos_in, y_pos_in); });
+	glfwSetScrollCallback(window,
+		[](GLFWwindow * window, double x_offset, double y_offset) {
+			renderer.HandleScrollCallback(window, x_offset, y_offset); });
+	glfwSetMouseButtonCallback(window,
+		[](GLFWwindow* window, int button, int action, int mods) {
+			renderer.HandleMouseButtonCallback(window, button, action, mods); });
 
 	// initialize glad
 	if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
@@ -60,26 +64,4 @@ int main(int argc, const char* argv[]) {
 	glfwTerminate();
 
 	return 0;
-}
-
-void framebufferSizeCallback(GLFWwindow* window, int width, int height)
-{
-	renderer.HandleFramebufferSizeCallback(window, width, height);
-}
-
-// glfw: whenever the mouse moves, this callback is called
-void mouseCallback(GLFWwindow* window, double x_pos_in, double y_pos_in)
-{
-	renderer.HandleMouseCallback(window, x_pos_in, y_pos_in);
-}
-
-// glfw: whenever the mouse scroll wheel scrolls, this callback is called
-void scrollCallback(GLFWwindow* window, double x_offset, double y_offset)
-{
-	renderer.HandleScrollCallback(window, x_offset, y_offset);
-}
-
-void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
-{
-	renderer.HandleMouseButtonCallback(window, button, action, mods);
 }
