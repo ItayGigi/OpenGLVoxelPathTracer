@@ -23,6 +23,7 @@
 #include "camera.h"
 #include "brick.h"
 #include "debug_gui.h"
+#include "compute-shader.h"
 
 
 enum BufferTexture {
@@ -62,7 +63,7 @@ class Renderer
 
 	unsigned int scene_tex, bricks_tex, mats_tex;
 
-	std::unique_ptr<Shader> shader;
+	std::unique_ptr<ComputeShader> pathtrace_shader;
 	std::unique_ptr<Shader> post_process_shader;
 
 	DebugGUIWindow debug_gui;
@@ -71,8 +72,8 @@ public:
 	int Initialize(GLFWwindow* window, int argc, const char* argv[]) {
 		glfwSwapInterval(config::VSYNC);
 
-		shader = std::make_unique<Shader>(Shader(config::VertexShaderPath, config::FragShaderPath));
-		post_process_shader = std::make_unique<Shader>(Shader(config::VertexShaderPath, config::PostFragShaderPath));
+		pathtrace_shader = std::make_unique<ComputeShader>("shaders/pathtrace.compute");
+		post_process_shader = std::make_unique<Shader>(config::VertexShaderPath, config::PostFragShaderPath);
 
 		drawUtils::setLineWidth(config::LineWidth);
 
@@ -137,6 +138,7 @@ public:
 		if (debug_gui.CriticalVariablesChanged()) HandleFramebufferSizeCallback(window, window_width, window_height);
 
 		renderPathTrace(fbo1, buffer_textures2);
+
 		renderComposite(0, buffer_textures1); // render to screen
 
 		renderLines(buffer_textures1);
@@ -198,7 +200,7 @@ public:
 
 			glActiveTexture(GL_TEXTURE0 + 5 + SCREEN_TEXTURE);
 			glBindTexture(GL_TEXTURE_2D, buffer_textures1[SCREEN_TEXTURE]);
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, window_width, window_height, 0, GL_RGB, GL_FLOAT, NULL);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, window_width, window_height, 0, GL_RGB, GL_FLOAT, NULL);
 
 			glActiveTexture(GL_TEXTURE0 + 5 + HISTORY_TEXTURE);
 			glBindTexture(GL_TEXTURE_2D, buffer_textures1[HISTORY_TEXTURE]);
@@ -210,11 +212,11 @@ public:
 
 			glActiveTexture(GL_TEXTURE0 + 5 + ALBEDO_TEXTURE);
 			glBindTexture(GL_TEXTURE_2D, buffer_textures1[ALBEDO_TEXTURE]);
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, window_width, window_height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, window_width, window_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 
 			glActiveTexture(GL_TEXTURE0 + 5 + NORMAL_TEXTURE);
 			glBindTexture(GL_TEXTURE_2D, buffer_textures1[NORMAL_TEXTURE]);
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8I, window_width, window_height, 0, GL_RGB_INTEGER, GL_INT, NULL);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8I, window_width, window_height, 0, GL_RGBA_INTEGER, GL_INT, NULL);
 
 			glActiveTexture(GL_TEXTURE0 + 5 + EMISSION_TEXTURE);
 			glBindTexture(GL_TEXTURE_2D, buffer_textures1[EMISSION_TEXTURE]);
@@ -366,8 +368,8 @@ private:
 	}
 
 	bool loadScene(Scene* scene, unsigned int* scene_texture, unsigned int* bricks_texture, unsigned int* mats_texture) {
-		shader->use();
-		shader->setUVec3("MapSize", scene->brick_map->size.x, scene->brick_map->size.y, scene->brick_map->size.z);
+		pathtrace_shader->use();
+		pathtrace_shader->setUVec3("MapSize", scene->brick_map->size.x, scene->brick_map->size.y, scene->brick_map->size.z);
 
 		glGenTextures(1, scene_texture);
 		glActiveTexture(GL_TEXTURE0);
@@ -378,7 +380,7 @@ private:
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-		glUniform1i(glGetUniformLocation(shader->ID, "BrickMap"), 0);
+		glUniform1i(glGetUniformLocation(pathtrace_shader->ID, "BrickMap"), 0);
 
 		// bricks
 		glGenTextures(1, bricks_texture);
@@ -399,7 +401,7 @@ private:
 			glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, i, config::BrickSize * config::BrickSize / 8, config::BrickSize, 1, GL_RED_INTEGER, GL_UNSIGNED_INT, scene->bricks[i]->data.data());
 		}
 
-		glUniform1i(glGetUniformLocation(shader->ID, "BricksTex"), 1);
+		glUniform1i(glGetUniformLocation(pathtrace_shader->ID, "BricksTex"), 1);
 
 		// materials
 		glGenTextures(1, mats_texture);
@@ -411,9 +413,9 @@ private:
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
 
-		glUniform1i(glGetUniformLocation(shader->ID, "MatsTex"), 2);
+		glUniform1i(glGetUniformLocation(pathtrace_shader->ID, "MatsTex"), 2);
 
-		shader->setVec3("EnvironmentColor", scene->brick_map->env_color);
+		pathtrace_shader->setVec3("EnvironmentColor", scene->brick_map->env_color);
 
 		camera = Camera(scene->brick_map->camera_start_pos, { {0.0f},{1.0f},{0.0f} }, scene->brick_map->camera_start_angles.y, scene->brick_map->camera_start_angles.x);;
 
@@ -452,37 +454,46 @@ private:
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 	}
 
-	void renderPathTrace(unsigned int framebuffer, unsigned int* last_frame_textures) {
-		glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+	void renderPathTrace(unsigned int target_framebuffer, unsigned int* last_frame_textures) {
+		glBindFramebuffer(GL_FRAMEBUFFER, target_framebuffer);
 
-		shader->use();
+		glBindImageTexture(SCREEN_TEXTURE, buffer_textures1[SCREEN_TEXTURE], 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
+		glBindImageTexture(HISTORY_TEXTURE, buffer_textures1[HISTORY_TEXTURE], 0, GL_FALSE, 0, GL_READ_WRITE, GL_R32F);
+		glBindImageTexture(DEPTH_TEXTURE, buffer_textures1[DEPTH_TEXTURE], 0, GL_FALSE, 0, GL_READ_WRITE, GL_R32F);
+		glBindImageTexture(ALBEDO_TEXTURE, buffer_textures1[ALBEDO_TEXTURE], 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA8);
+		glBindImageTexture(NORMAL_TEXTURE, buffer_textures1[NORMAL_TEXTURE], 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA8I);
+		glBindImageTexture(EMISSION_TEXTURE, buffer_textures1[EMISSION_TEXTURE], 0, GL_FALSE, 0, GL_READ_WRITE, GL_R32F);
+		glBindImageTexture(ROUGHNESS_TEXTURE, buffer_textures1[ROUGHNESS_TEXTURE], 0, GL_FALSE, 0, GL_READ_WRITE, GL_R32F);
 
-		shader->setMat4("CamRotation", glm::mat4_cast(camera.GetRotation()));
-		shader->setVec3("CamPosition", camera.position);
+		pathtrace_shader->use();
 
-		shader->setMat4("LastCamRotation", glm::mat4_cast(last_camera.GetRotation()));
-		shader->setVec3("LastCamPosition", last_camera.position);
+		pathtrace_shader->setMat4("CamRotation", glm::mat4_cast(camera.GetRotation()));
+		pathtrace_shader->setVec3("CamPosition", camera.position);
 
-		shader->setUVec2("Resolution", window_width, window_height);
+		pathtrace_shader->setMat4("LastCamRotation", glm::mat4_cast(last_camera.GetRotation()));
+		pathtrace_shader->setVec3("LastCamPosition", last_camera.position);
 
-		shader->setUInt("FrameCount", frame_count);
+		pathtrace_shader->setUVec2("Resolution", window_width, window_height);
 
-		shader->setTexture("LastFrameTex", last_frame_textures[SCREEN_TEXTURE], 5 + SCREEN_TEXTURE);
-		shader->setTexture("HistoryTex", last_frame_textures[HISTORY_TEXTURE], 5 + HISTORY_TEXTURE);
-		shader->setTexture("LastDepthTex", last_frame_textures[DEPTH_TEXTURE], 5 + DEPTH_TEXTURE);
-		shader->setTexture("LastNormalTex", last_frame_textures[NORMAL_TEXTURE], 5 + NORMAL_TEXTURE);
-		shader->setTexture("LastRoughnessTex", last_frame_textures[ROUGHNESS_TEXTURE], 5 + ROUGHNESS_TEXTURE);
+		pathtrace_shader->setUInt("FrameCount", frame_count);
 
-		shader->setFloat("SunStrength", debug_gui.sun_strength);
-		shader->setFloat("SunAngle", debug_gui.sun_angle);
+		pathtrace_shader->setTexture("LastFrameTex", last_frame_textures[SCREEN_TEXTURE], 5 + SCREEN_TEXTURE);
+		pathtrace_shader->setTexture("HistoryTex", last_frame_textures[HISTORY_TEXTURE], 5 + HISTORY_TEXTURE);
+		pathtrace_shader->setTexture("LastDepthTex", last_frame_textures[DEPTH_TEXTURE], 5 + DEPTH_TEXTURE);
+		pathtrace_shader->setTexture("LastNormalTex", last_frame_textures[NORMAL_TEXTURE], 5 + NORMAL_TEXTURE);
+		pathtrace_shader->setTexture("LastRoughnessTex", last_frame_textures[ROUGHNESS_TEXTURE], 5 + ROUGHNESS_TEXTURE);
 
-		glBindVertexArray(vao);
-		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+		pathtrace_shader->setFloat("SunStrength", debug_gui.sun_strength);
+		pathtrace_shader->setFloat("SunAngle", debug_gui.sun_angle);
+
+		glDispatchCompute((unsigned int)window_width, (unsigned int)window_height, 1);
+		// make sure writing to image has finished before read
+		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 	}
 
-	void renderComposite(unsigned int framebuffer, unsigned int* path_traced_textures) {
+	void renderComposite(unsigned int target_framebuffer, unsigned int* path_traced_textures) {
 		// post processing
-		glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+		glBindFramebuffer(GL_FRAMEBUFFER, target_framebuffer);
 		post_process_shader->use();
 
 		post_process_shader->setUVec2("Resolution", window_width, window_height);
